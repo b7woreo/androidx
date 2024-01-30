@@ -31,7 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.integration.demos.common.ScalingLazyColumnWithRSB
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.RadioButton
@@ -40,7 +40,7 @@ import androidx.wear.compose.material3.Text
 @Composable
 fun RadioButtonDemo() {
     var selectedRadioIndex by remember { mutableIntStateOf(0) }
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize().selectableGroup(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -78,7 +78,7 @@ fun RadioButtonDemo() {
                 enabled = true,
                 selected = true,
             ) {
-                Icon(imageVector = Icons.Filled.Favorite, contentDescription = "Favorite")
+                Icon(imageVector = Icons.Filled.Favorite, contentDescription = "Favorite icon")
             }
         }
         item {
@@ -87,7 +87,7 @@ fun RadioButtonDemo() {
                 selected = true,
                 secondary = "Secondary label"
             ) {
-                Icon(imageVector = Icons.Filled.Favorite, contentDescription = "Favorite")
+                Icon(imageVector = Icons.Filled.Favorite, contentDescription = "Favorite icon")
             }
         }
         item {
@@ -98,7 +98,7 @@ fun RadioButtonDemo() {
                 enabled = true,
                 selected = true,
                 primary = "8:15AM",
-                secondary = "Mon, Tue, Wed"
+                secondary = "Monday"
             )
         }
         item {
@@ -129,6 +129,7 @@ private fun DemoRadioButton(
     content: (@Composable BoxScope.() -> Unit)? = null,
 ) {
     RadioButton(
+        modifier = Modifier.fillMaxWidth(),
         icon = content,
         label = {
             Text(

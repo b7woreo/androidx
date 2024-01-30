@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.LibraryType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -51,8 +58,6 @@ dependencies {
     testImplementation(libs.testRules)
     testImplementation(libs.testRunner)
     testImplementation(libs.junit)
-
-    samples(project(":wear:compose:compose-material-samples"))
 }
 
 android {
@@ -82,6 +87,7 @@ androidx {
             "implement Wear Material 3 Design UX guidelines and specifications. It builds upon " +
             "the Jetpack Compose libraries."
     targetsJavaConsumers = false
+    samples(project(":wear:compose:compose-material-samples"))
 }
 
 tasks.withType(KotlinCompile).configureEach {

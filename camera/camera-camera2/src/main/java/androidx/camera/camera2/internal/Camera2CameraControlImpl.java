@@ -48,7 +48,7 @@ import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
 import androidx.camera.core.FocusMeteringAction;
 import androidx.camera.core.FocusMeteringResult;
 import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageCapture.ScreenFlashUiControl;
+import androidx.camera.core.ImageCapture.ScreenFlash;
 import androidx.camera.core.Logger;
 import androidx.camera.core.impl.CameraCaptureCallback;
 import androidx.camera.core.impl.CameraCaptureFailure;
@@ -133,7 +133,7 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
     @GuardedBy("mLock")
     private int mUseCount = 0;
 
-    private ScreenFlashUiControl mScreenFlashUiControl;
+    private ImageCapture.ScreenFlash mScreenFlash;
 
     // use volatile modifier to make these variables in sync in all threads.
     private volatile boolean mIsTorchOn = false;
@@ -316,7 +316,7 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
         mExposureControl.setActive(isActive);
         mCamera2CameraControl.setActive(isActive);
         if (!isActive) {
-            mScreenFlashUiControl = null;
+            mScreenFlash = null;
         }
     }
 
@@ -395,13 +395,13 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
 
     /** {@inheritDoc} */
     @Override
-    public void setScreenFlashUiControl(@Nullable ScreenFlashUiControl screenFlashUiControl) {
-        mScreenFlashUiControl = screenFlashUiControl;
+    public void setScreenFlash(@Nullable ScreenFlash screenFlash) {
+        mScreenFlash = screenFlash;
     }
 
     @Nullable
-    public ScreenFlashUiControl getScreenFlashUiControl() {
-        return mScreenFlashUiControl;
+    public ScreenFlash getScreenFlash() {
+        return mScreenFlash;
     }
 
     @Override
@@ -909,11 +909,12 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
 
         @ExecutedBy("mExecutor")
         @Override
-        public void onCaptureCompleted(@NonNull CameraCaptureResult cameraCaptureResult) {
+        public void onCaptureCompleted(int captureConfigId,
+                @NonNull CameraCaptureResult cameraCaptureResult) {
             for (CameraCaptureCallback callback : mCallbacks) {
                 try {
                     mCallbackExecutors.get(callback).execute(() -> {
-                        callback.onCaptureCompleted(cameraCaptureResult);
+                        callback.onCaptureCompleted(captureConfigId, cameraCaptureResult);
                     });
                 } catch (RejectedExecutionException e) {
                     Logger.e(TAG, "Executor rejected to invoke onCaptureCompleted.", e);
@@ -923,11 +924,11 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
 
         @ExecutedBy("mExecutor")
         @Override
-        public void onCaptureFailed(@NonNull CameraCaptureFailure failure) {
+        public void onCaptureFailed(int captureConfigId, @NonNull CameraCaptureFailure failure) {
             for (CameraCaptureCallback callback : mCallbacks) {
                 try {
                     mCallbackExecutors.get(callback).execute(() -> {
-                        callback.onCaptureFailed(failure);
+                        callback.onCaptureFailed(captureConfigId, failure);
                     });
                 } catch (RejectedExecutionException e) {
                     Logger.e(TAG, "Executor rejected to invoke onCaptureFailed.", e);
@@ -937,11 +938,11 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
 
         @ExecutedBy("mExecutor")
         @Override
-        public void onCaptureCancelled() {
+        public void onCaptureCancelled(int captureConfigId) {
             for (CameraCaptureCallback callback : mCallbacks) {
                 try {
                     mCallbackExecutors.get(callback).execute(() -> {
-                        callback.onCaptureCancelled();
+                        callback.onCaptureCancelled(captureConfigId);
                     });
                 } catch (RejectedExecutionException e) {
                     Logger.e(TAG, "Executor rejected to invoke onCaptureCancelled.", e);

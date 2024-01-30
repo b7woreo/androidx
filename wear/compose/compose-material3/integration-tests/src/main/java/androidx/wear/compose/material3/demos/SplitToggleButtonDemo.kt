@@ -29,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.integration.demos.common.ScalingLazyColumnWithRSB
 import androidx.wear.compose.material3.Checkbox
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.SplitToggleButton
@@ -38,7 +38,7 @@ import androidx.wear.compose.material3.Text
 
 @Composable
 fun SplitToggleButtonDemo() {
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -86,7 +86,7 @@ fun SplitToggleButtonDemo() {
                 enabled = true,
                 initiallyChecked = true,
                 primary = "8:15AM",
-                secondary = "Mon, Tue, Wed"
+                secondary = "Monday"
             )
         }
         item {
@@ -117,6 +117,7 @@ private fun DemoSplitToggleCheckbox(
     var checked by remember { mutableStateOf(initiallyChecked) }
     val context = LocalContext.current
     SplitToggleButton(
+        modifier = Modifier.fillMaxWidth(),
         label = {
             Text(
                 primary,
@@ -130,7 +131,8 @@ private fun DemoSplitToggleCheckbox(
         toggleControl = { Checkbox() },
         onCheckedChange = { checked = it },
         onClick = {
-            Toast.makeText(context, "Clicked", Toast.LENGTH_SHORT).show()
+            val toastText = if (checked) "Checked" else "Not Checked"
+            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
         },
         enabled = enabled,
         secondaryLabel = {
@@ -152,12 +154,13 @@ private fun DemoSplitToggleSwitch(enabled: Boolean, initiallyChecked: Boolean) {
     var checked by remember { mutableStateOf(initiallyChecked) }
     val context = LocalContext.current
     SplitToggleButton(
+        modifier = Modifier.fillMaxWidth(),
         label = {
             Text(
                 "Primary label",
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Start,
                 overflow = TextOverflow.Ellipsis
             )
         },
@@ -165,7 +168,8 @@ private fun DemoSplitToggleSwitch(enabled: Boolean, initiallyChecked: Boolean) {
         toggleControl = { Switch() },
         onCheckedChange = { checked = it },
         onClick = {
-            Toast.makeText(context, "Clicked", Toast.LENGTH_SHORT).show()
+            val toastText = if (checked) "Checked" else "Not Checked"
+            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
         },
         enabled = enabled,
     )

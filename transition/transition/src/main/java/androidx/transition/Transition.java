@@ -22,7 +22,6 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.TimeInterpolator;
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.content.res.XmlResourceParser;
@@ -299,8 +298,6 @@ public abstract class Transition implements Cloneable {
      *                access the current theme, resources, etc.
      * @param attrs   The attributes of the XML tag that is inflating the transition.
      */
-    @SuppressLint("RestrictedApi") // remove once core lib would be released with the new
-    // LIBRARY_GROUP_PREFIX restriction. tracking in b/127286008
     public Transition(@NonNull Context context, @NonNull AttributeSet attrs) {
         TypedArray a = context.obtainStyledAttributes(attrs, Styleable.TRANSITION);
         XmlResourceParser parser = (XmlResourceParser) attrs;
@@ -1667,11 +1664,11 @@ public abstract class Transition implements Cloneable {
                     // Duplicate item IDs: cannot match by item ID.
                     View alreadyMatched = transitionValuesMaps.mItemIdValues.get(itemId);
                     if (alreadyMatched != null) {
-                        ViewCompat.setHasTransientState(alreadyMatched, false);
+                        alreadyMatched.setHasTransientState(false);
                         transitionValuesMaps.mItemIdValues.put(itemId, null);
                     }
                 } else {
-                    ViewCompat.setHasTransientState(view, true);
+                    view.setHasTransientState(true);
                     transitionValuesMaps.mItemIdValues.put(itemId, view);
                 }
             }
@@ -2073,13 +2070,13 @@ public abstract class Transition implements Cloneable {
             for (int i = 0; i < mStartValues.mItemIdValues.size(); ++i) {
                 View view = mStartValues.mItemIdValues.valueAt(i);
                 if (view != null) {
-                    ViewCompat.setHasTransientState(view, false);
+                    view.setHasTransientState(false);
                 }
             }
             for (int i = 0; i < mEndValues.mItemIdValues.size(); ++i) {
                 View view = mEndValues.mItemIdValues.valueAt(i);
                 if (view != null) {
-                    ViewCompat.setHasTransientState(view, false);
+                    view.setHasTransientState(false);
                 }
             }
             mEnded = true;
@@ -2884,16 +2881,24 @@ public abstract class Transition implements Cloneable {
 
                     if (isReversed) {
                         long duration = getDurationMillis();
-                        Transition.this.setCurrentPlayTimeMillis(duration, mCurrentPlayTime);
+                        // controlDelayedTransition always wraps the transition in a TransitionSet
+                        Transition child = ((TransitionSet) Transition.this).getTransitionAt(0);
+                        Transition cloneParent = child.mCloneParent;
+                        child.mCloneParent = null;
+                        Transition.this.setCurrentPlayTimeMillis(-1, mCurrentPlayTime);
+                        Transition.this.setCurrentPlayTimeMillis(duration, -1);
                         mCurrentPlayTime = duration;
                         if (mResetToStartState != null) {
                             mResetToStartState.run();
                         }
                         mAnimators.clear();
+                        if (cloneParent != null) {
+                            cloneParent.notifyListeners(TransitionNotification.ON_END, true);
+                        }
+                    } else {
+                        notifyListeners(TransitionNotification.ON_END, false);
                     }
-                    notifyListeners(TransitionNotification.ON_END, isReversed);
                 }
-                mSpringAnimation = null;
             });
         }
 
@@ -2907,7 +2912,7 @@ public abstract class Transition implements Cloneable {
         public void animateToStart(@NonNull Runnable resetToStartState) {
             mResetToStartState = resetToStartState;
             ensureAnimation();
-            mSpringAnimation.animateToFinalPosition(-1);
+            mSpringAnimation.animateToFinalPosition(0);
         }
 
         @Override

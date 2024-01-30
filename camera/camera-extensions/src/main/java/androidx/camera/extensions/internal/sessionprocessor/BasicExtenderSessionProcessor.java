@@ -233,11 +233,6 @@ public class BasicExtenderSessionProcessor extends SessionProcessorBase {
 
     @Override
     protected void deInitSessionInternal() {
-        Logger.d(TAG, "preview onDeInit");
-        mPreviewExtenderImpl.onDeInit();
-        Logger.d(TAG, "capture onDeInit");
-        mImageCaptureExtenderImpl.onDeInit();
-
         if (mPreviewProcessor != null) {
             mPreviewProcessor.close();
             mPreviewProcessor = null;
@@ -246,6 +241,13 @@ public class BasicExtenderSessionProcessor extends SessionProcessorBase {
             mStillCaptureProcessor.close();
             mStillCaptureProcessor = null;
         }
+
+        // Close the processor prior to OEMs's onDeinit in case OEMs block the thread for too
+        // long and the processor is closed too late.
+        Logger.d(TAG, "preview onDeInit");
+        mPreviewExtenderImpl.onDeInit();
+        Logger.d(TAG, "capture onDeInit");
+        mImageCaptureExtenderImpl.onDeInit();
     }
 
     @Override
@@ -550,9 +552,15 @@ public class BasicExtenderSessionProcessor extends SessionProcessorBase {
                             totalCaptureResult,
                             requestProcessorRequest.getCaptureStageId());
                 } else {
+                    mIsCapturing = false;
+                    if (mRequestProcessor == null) {
+                        // notify the onCaptureSequenceAborted callback if onCaptureCompleted
+                        // happens but session is closed.
+                        captureCallback.onCaptureSequenceAborted(captureSequenceId);
+                        return;
+                    }
                     captureCallback.onCaptureProcessStarted(captureSequenceId);
                     captureCallback.onCaptureSequenceCompleted(captureSequenceId);
-                    mIsCapturing = false;
                 }
             }
 
@@ -576,6 +584,26 @@ public class BasicExtenderSessionProcessor extends SessionProcessorBase {
 
         Logger.d(TAG, "startCapture");
         if (mStillCaptureProcessor != null) {
+            setImageProcessor(mCaptureOutputConfig.getId(),
+                    new ImageProcessor() {
+                        boolean mIsFirstFrame = true;
+
+                        @Override
+                        public void onNextImageAvailable(int outputStreamId, long timestampNs,
+                                @NonNull ImageReference imageReference,
+                                @Nullable String physicalCameraId) {
+                            Logger.d(TAG,
+                                    "onNextImageAvailable  outputStreamId=" + outputStreamId);
+                            if (mStillCaptureProcessor != null) {
+                                mStillCaptureProcessor.notifyImage(imageReference);
+                            }
+
+                            if (mIsFirstFrame) {
+                                captureCallback.onCaptureProcessStarted(captureSequenceId);
+                                mIsFirstFrame = false;
+                            }
+                        }
+                    });
             mStillCaptureProcessor.startCapture(postviewEnabled, captureIdList,
                     new StillCaptureProcessor.OnCaptureResultCallback() {
                         @Override
@@ -603,26 +631,7 @@ public class BasicExtenderSessionProcessor extends SessionProcessorBase {
                         }
                     });
         }
-        setImageProcessor(mCaptureOutputConfig.getId(),
-                new ImageProcessor() {
-                    boolean mIsFirstFrame = true;
 
-                    @Override
-                    public void onNextImageAvailable(int outputStreamId, long timestampNs,
-                            @NonNull ImageReference imageReference,
-                            @Nullable String physicalCameraId) {
-                        Logger.d(TAG,
-                                "onNextImageAvailable  outputStreamId=" + outputStreamId);
-                        if (mStillCaptureProcessor != null) {
-                            mStillCaptureProcessor.notifyImage(imageReference);
-                        }
-
-                        if (mIsFirstFrame) {
-                            captureCallback.onCaptureProcessStarted(captureSequenceId);
-                            mIsFirstFrame = false;
-                        }
-                    }
-                });
         mRequestProcessor.submit(requestList, callback);
         return captureSequenceId;
     }

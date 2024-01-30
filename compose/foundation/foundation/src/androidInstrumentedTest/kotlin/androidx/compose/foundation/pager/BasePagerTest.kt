@@ -23,7 +23,7 @@ import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.snapping.SnapFlingBehavior
+import androidx.compose.foundation.gestures.TargetedFlingBehavior
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -117,7 +117,7 @@ open class BasePagerTest(private val config: ParamConfig) :
         initialPageOffsetFraction: Float = 0f,
         pageCount: () -> Int = { DefaultPageCount },
         modifier: Modifier = Modifier,
-        beyondBoundsPageCount: Int = config.beyondBoundsPageCount,
+        outOfBoundsPageCount: Int = config.outOfBoundsPageCount,
         pageSize: () -> PageSize = { PageSize.Fill },
         userScrollEnabled: Boolean = true,
         snappingPage: PagerSnapDistance = PagerSnapDistance.atMost(1),
@@ -129,6 +129,7 @@ open class BasePagerTest(private val config: ParamConfig) :
         snapPositionalThreshold: Float = 0.5f,
         key: ((index: Int) -> Any)? = null,
         snapPosition: SnapPosition = config.snapPosition.first,
+        flingBehavior: TargetedFlingBehavior? = null,
         pageContent: @Composable PagerScope.(page: Int) -> Unit = { Page(index = it) }
     ) {
 
@@ -138,12 +139,11 @@ open class BasePagerTest(private val config: ParamConfig) :
             }
             composeView = LocalView.current
             focusManager = LocalFocusManager.current
-            val flingBehavior =
-                PagerDefaults.flingBehavior(
-                    state = state,
-                    pagerSnapDistance = snappingPage,
-                    snapPositionalThreshold = snapPositionalThreshold
-                )
+            val resolvedFlingBehavior = flingBehavior ?: PagerDefaults.flingBehavior(
+                state = state,
+                pagerSnapDistance = snappingPage,
+                snapPositionalThreshold = snapPositionalThreshold
+            )
             CompositionLocalProvider(
                 LocalLayoutDirection provides config.layoutDirection,
                 LocalOverscrollConfiguration provides null
@@ -156,14 +156,14 @@ open class BasePagerTest(private val config: ParamConfig) :
                 ) {
                     HorizontalOrVerticalPager(
                         state = state,
-                        beyondBoundsPageCount = beyondBoundsPageCount,
+                        outOfBoundsPageCount = outOfBoundsPageCount,
                         modifier = modifier
                             .testTag(PagerTestTag)
                             .onSizeChanged { pagerSize = if (vertical) it.height else it.width },
                         pageSize = pageSize(),
                         userScrollEnabled = userScrollEnabled,
                         reverseLayout = reverseLayout,
-                        flingBehavior = flingBehavior,
+                        flingBehavior = resolvedFlingBehavior,
                         pageSpacing = pageSpacing,
                         contentPadding = contentPadding,
                         pageContent = pageContent,
@@ -285,9 +285,9 @@ open class BasePagerTest(private val config: ParamConfig) :
         userScrollEnabled: Boolean = true,
         reverseLayout: Boolean = false,
         contentPadding: PaddingValues = PaddingValues(0.dp),
-        beyondBoundsPageCount: Int = 0,
+        outOfBoundsPageCount: Int = 0,
         pageSize: PageSize = PageSize.Fill,
-        flingBehavior: SnapFlingBehavior = PagerDefaults.flingBehavior(state = state),
+        flingBehavior: TargetedFlingBehavior = PagerDefaults.flingBehavior(state = state),
         pageSpacing: Dp = 0.dp,
         key: ((index: Int) -> Any)? = null,
         snapPosition: SnapPosition = config.snapPosition.first,
@@ -300,7 +300,7 @@ open class BasePagerTest(private val config: ParamConfig) :
                 userScrollEnabled = userScrollEnabled,
                 reverseLayout = reverseLayout,
                 contentPadding = contentPadding,
-                beyondBoundsPageCount = beyondBoundsPageCount,
+                outOfBoundsPageCount = outOfBoundsPageCount,
                 pageSize = pageSize,
                 flingBehavior = flingBehavior,
                 pageSpacing = pageSpacing,
@@ -315,7 +315,7 @@ open class BasePagerTest(private val config: ParamConfig) :
                 userScrollEnabled = userScrollEnabled,
                 reverseLayout = reverseLayout,
                 contentPadding = contentPadding,
-                beyondBoundsPageCount = beyondBoundsPageCount,
+                outOfBoundsPageCount = outOfBoundsPageCount,
                 pageSize = pageSize,
                 flingBehavior = flingBehavior,
                 pageSpacing = pageSpacing,
@@ -374,7 +374,7 @@ class ParamConfig(
     val layoutDirection: LayoutDirection = LayoutDirection.Ltr,
     val pageSpacing: Dp = 0.dp,
     val mainAxisContentPadding: PaddingValues = PaddingValues(0.dp),
-    val beyondBoundsPageCount: Int = 0,
+    val outOfBoundsPageCount: Int = 0,
     val snapPosition: Pair<SnapPosition, String> = SnapPosition.Start to "Start",
 ) {
     override fun toString(): String {
@@ -383,7 +383,7 @@ class ParamConfig(
             "layoutDirection=$layoutDirection " +
             "pageSpacing=$pageSpacing " +
             "mainAxisContentPadding=$mainAxisContentPadding " +
-            "beyondBoundsPageCount=$beyondBoundsPageCount " +
+            "outOfBoundsPageCount=$outOfBoundsPageCount " +
             "snapPosition=${snapPosition.second}"
     }
 }
@@ -392,6 +392,7 @@ internal const val PagerTestTag = "pager"
 internal const val DefaultPageCount = 20
 internal const val DefaultAnimationRepetition = 2
 internal val TestOrientation = listOf(Orientation.Vertical, Orientation.Horizontal)
+
 @OptIn(ExperimentalFoundationApi::class)
 internal val AllOrientationsParams = mutableListOf<ParamConfig>().apply {
     for (orientation in TestOrientation) {
@@ -401,12 +402,13 @@ internal val AllOrientationsParams = mutableListOf<ParamConfig>().apply {
 internal val TestReverseLayout = listOf(false, true)
 internal val TestLayoutDirection = listOf(LayoutDirection.Rtl, LayoutDirection.Ltr)
 internal val TestPageSpacing = listOf(0.dp, 8.dp)
-@OptIn(ExperimentalFoundationApi::class)
+
 internal val TestSnapPosition = listOf(
     SnapPosition.Start to "Start",
     SnapPosition.Center to "Center",
     SnapPosition.End to "End"
 )
+
 internal fun testContentPaddings(orientation: Orientation) = listOf(
     PaddingValues(0.dp),
     if (orientation == Orientation.Vertical)

@@ -29,7 +29,9 @@ package androidx.work {
     method public androidx.work.RunnableScheduler getRunnableScheduler();
     method public androidx.core.util.Consumer<java.lang.Throwable>? getSchedulingExceptionHandler();
     method public java.util.concurrent.Executor getTaskExecutor();
+    method public androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo>? getWorkerExecutionExceptionHandler();
     method public androidx.work.WorkerFactory getWorkerFactory();
+    method public androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo>? getWorkerInitializationExceptionHandler();
     property public final androidx.work.Clock clock;
     property public final int contentUriTriggerWorkersLimit;
     property public final String? defaultProcessName;
@@ -41,7 +43,9 @@ package androidx.work {
     property public final androidx.work.RunnableScheduler runnableScheduler;
     property public final androidx.core.util.Consumer<java.lang.Throwable>? schedulingExceptionHandler;
     property public final java.util.concurrent.Executor taskExecutor;
+    property public final androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo>? workerExecutionExceptionHandler;
     property public final androidx.work.WorkerFactory workerFactory;
+    property public final androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo>? workerInitializationExceptionHandler;
     field public static final androidx.work.Configuration.Companion Companion;
     field public static final int MIN_SCHEDULER_LIMIT = 20; // 0x14
   }
@@ -61,7 +65,9 @@ package androidx.work {
     method public androidx.work.Configuration.Builder setRunnableScheduler(androidx.work.RunnableScheduler runnableScheduler);
     method public androidx.work.Configuration.Builder setSchedulingExceptionHandler(androidx.core.util.Consumer<java.lang.Throwable> schedulingExceptionHandler);
     method public androidx.work.Configuration.Builder setTaskExecutor(java.util.concurrent.Executor taskExecutor);
+    method public androidx.work.Configuration.Builder setWorkerExecutionExceptionHandler(androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo> workerExceptionHandler);
     method public androidx.work.Configuration.Builder setWorkerFactory(androidx.work.WorkerFactory workerFactory);
+    method public androidx.work.Configuration.Builder setWorkerInitializationExceptionHandler(androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo> workerExceptionHandler);
   }
 
   public static final class Configuration.Companion {
@@ -152,7 +158,7 @@ package androidx.work {
     method public long getLong(String key, long defaultValue);
     method public long[]? getLongArray(String key);
     method public String? getString(String key);
-    method public String![]? getStringArray(String key);
+    method public String[]? getStringArray(String key);
     method public <T> boolean hasKeyWithValueOfType(String key, Class<T> klass);
     method public byte[] toByteArray();
     property public final java.util.Map<java.lang.String,java.lang.Object> keyValueMap;
@@ -179,7 +185,7 @@ package androidx.work {
     method public androidx.work.Data.Builder putLong(String key, long value);
     method public androidx.work.Data.Builder putLongArray(String key, long[] value);
     method public androidx.work.Data.Builder putString(String key, String? value);
-    method public androidx.work.Data.Builder putStringArray(String key, String![] value);
+    method public androidx.work.Data.Builder putStringArray(String key, String?[] value);
   }
 
   public static final class Data.Companion {
@@ -340,9 +346,9 @@ package androidx.work {
 
   public static final class PeriodicWorkRequest.Builder extends androidx.work.WorkRequest.Builder<androidx.work.PeriodicWorkRequest.Builder,androidx.work.PeriodicWorkRequest> {
     ctor @RequiresApi(26) public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker> workerClass, java.time.Duration repeatInterval);
-    ctor @RequiresApi(26) public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker> workerClass, java.time.Duration repeatInterval, java.time.Duration flexInterval);
-    ctor public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker> workerClass, long repeatInterval, java.util.concurrent.TimeUnit repeatIntervalTimeUnit);
-    ctor public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker> workerClass, long repeatInterval, java.util.concurrent.TimeUnit repeatIntervalTimeUnit, long flexInterval, java.util.concurrent.TimeUnit flexIntervalTimeUnit);
+    ctor @RequiresApi(26) public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker?> workerClass, java.time.Duration repeatInterval, java.time.Duration flexInterval);
+    ctor public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker?> workerClass, long repeatInterval, java.util.concurrent.TimeUnit repeatIntervalTimeUnit);
+    ctor public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker?> workerClass, long repeatInterval, java.util.concurrent.TimeUnit repeatIntervalTimeUnit, long flexInterval, java.util.concurrent.TimeUnit flexIntervalTimeUnit);
     method public androidx.work.PeriodicWorkRequest.Builder clearNextScheduleTimeOverride();
     method public androidx.work.PeriodicWorkRequest.Builder setNextScheduleTimeOverride(long nextScheduleTimeOverrideMillis);
   }
@@ -466,7 +472,7 @@ package androidx.work {
     method public abstract androidx.work.Operation cancelWorkById(java.util.UUID);
     method public abstract android.app.PendingIntent createCancelPendingIntent(java.util.UUID);
     method public final androidx.work.Operation enqueue(androidx.work.WorkRequest);
-    method public abstract androidx.work.Operation enqueue(java.util.List<? extends androidx.work.WorkRequest>);
+    method public abstract androidx.work.Operation enqueue(java.util.List<? extends androidx.work.WorkRequest!>);
     method public abstract androidx.work.Operation enqueueUniquePeriodicWork(String, androidx.work.ExistingPeriodicWorkPolicy, androidx.work.PeriodicWorkRequest);
     method public androidx.work.Operation enqueueUniqueWork(String, androidx.work.ExistingWorkPolicy, androidx.work.OneTimeWorkRequest);
     method public abstract androidx.work.Operation enqueueUniqueWork(String, androidx.work.ExistingWorkPolicy, java.util.List<androidx.work.OneTimeWorkRequest!>);
@@ -502,7 +508,7 @@ package androidx.work {
   public final class WorkManagerInitializer implements androidx.startup.Initializer<androidx.work.WorkManager> {
     ctor public WorkManagerInitializer();
     method public androidx.work.WorkManager create(android.content.Context);
-    method public java.util.List<java.lang.Class<? extends androidx.startup.Initializer<?>>!> dependencies();
+    method public java.util.List<java.lang.Class<? extends androidx.startup.Initializer<?>!>!> dependencies();
   }
 
   public final class WorkQuery {
@@ -588,6 +594,16 @@ package androidx.work {
     method @WorkerThread public abstract androidx.work.ListenableWorker.Result doWork();
     method @WorkerThread public androidx.work.ForegroundInfo getForegroundInfo();
     method public final com.google.common.util.concurrent.ListenableFuture<androidx.work.ListenableWorker.Result> startWork();
+  }
+
+  public final class WorkerExceptionInfo {
+    ctor public WorkerExceptionInfo(String workerClassName, androidx.work.WorkerParameters workerParameters, Throwable throwable);
+    method public Throwable getThrowable();
+    method public String getWorkerClassName();
+    method public androidx.work.WorkerParameters getWorkerParameters();
+    property public final Throwable throwable;
+    property public final String workerClassName;
+    property public final androidx.work.WorkerParameters workerParameters;
   }
 
   public abstract class WorkerFactory {

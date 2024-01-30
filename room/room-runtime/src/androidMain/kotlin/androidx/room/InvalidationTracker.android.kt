@@ -15,7 +15,6 @@
  */
 package androidx.room
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.database.sqlite.SQLiteException
@@ -32,8 +31,6 @@ import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteStatement
 import java.lang.ref.WeakReference
-import java.util.Arrays
-import java.util.Locale
 import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -90,18 +87,18 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
     init {
         tableIdLookup = mutableMapOf()
         tablesNames = Array(tableNames.size) { id ->
-            val tableName = tableNames[id].lowercase(Locale.US)
+            val tableName = tableNames[id].lowercase()
             tableIdLookup[tableName] = id
-            val shadowTableName = shadowTablesMap[tableNames[id]]?.lowercase(Locale.US)
+            val shadowTableName = shadowTablesMap[tableNames[id]]?.lowercase()
             shadowTableName ?: tableName
         }
 
         // Adjust table id lookup for those tables whose shadow table is another already mapped
         // table (e.g. external content fts tables).
         shadowTablesMap.forEach { entry ->
-            val shadowTableName = entry.value.lowercase(Locale.US)
+            val shadowTableName = entry.value.lowercase()
             if (tableIdLookup.containsKey(shadowTableName)) {
-                val tableName = entry.key.lowercase(Locale.US)
+                val tableName = entry.key.lowercase()
                 tableIdLookup[tableName] = tableIdLookup.getValue(shadowTableName)
             }
         }
@@ -242,12 +239,11 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
      *
      * @param observer The observer which listens the database for changes.
      */
-    @SuppressLint("RestrictedApi")
     @WorkerThread
     open fun addObserver(observer: Observer) {
         val tableNames = resolveViews(observer.tables)
         val tableIds = tableNames.map { tableName ->
-            tableIdLookup[tableName.lowercase(Locale.US)]
+            tableIdLookup[tableName.lowercase()]
                 ?: throw IllegalArgumentException("There is no table with name $tableName")
         }.toIntArray()
 
@@ -268,7 +264,7 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
     private fun validateAndResolveTableNames(tableNames: Array<out String>): Array<out String> {
         val resolved = resolveViews(tableNames)
         resolved.forEach { tableName ->
-            require(tableIdLookup.containsKey(tableName.lowercase(Locale.US))) {
+            require(tableIdLookup.containsKey(tableName.lowercase())) {
                 "There is no table with name $tableName"
             }
         }
@@ -284,8 +280,8 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
     private fun resolveViews(names: Array<out String>): Array<out String> {
         return buildSet {
             names.forEach { name ->
-                if (viewTables.containsKey(name.lowercase(Locale.US))) {
-                    addAll(viewTables[name.lowercase(Locale.US)]!!)
+                if (viewTables.containsKey(name.lowercase())) {
+                    addAll(viewTables[name.lowercase()]!!)
                 } else {
                     add(name)
                 }
@@ -314,7 +310,6 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
      *
      * @param observer The observer to remove.
      */
-    @SuppressLint("RestrictedApi")
     @WorkerThread
     open fun removeObserver(observer: Observer) {
         val wrapper = synchronized(observerMap) {
@@ -743,7 +738,7 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
          */
         fun resetTriggerState() {
             synchronized(this) {
-                Arrays.fill(triggerStates, false)
+                triggerStates.fill(element = false)
                 needsSync = true
             }
         }

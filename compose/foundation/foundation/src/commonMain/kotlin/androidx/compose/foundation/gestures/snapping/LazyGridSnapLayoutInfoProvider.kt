@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.gestures.snapping
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.lazy.grid.LazyGridItemInfo
 import androidx.compose.foundation.lazy.grid.LazyGridLayoutInfo
@@ -33,7 +32,6 @@ import androidx.compose.ui.util.fastForEach
  *
  * @return A [SnapLayoutInfoProvider] that can be used with [SnapFlingBehavior]
  */
-@ExperimentalFoundationApi
 fun SnapLayoutInfoProvider(
     lazyGridState: LazyGridState,
     snapPosition: SnapPosition = SnapPosition.Center
@@ -56,7 +54,8 @@ fun SnapLayoutInfoProvider(
                     itemSize = item.sizeOnMainAxis(orientation = layoutInfo.orientation),
                     itemOffset = item.offsetOnMainAxis(orientation = layoutInfo.orientation),
                     itemIndex = item.index,
-                    snapPosition = snapPosition
+                    snapPosition = snapPosition,
+                    itemCount = layoutInfo.totalItemsCount
                 )
 
             // Find item that is closest to the center

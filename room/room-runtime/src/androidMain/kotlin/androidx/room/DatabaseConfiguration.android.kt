@@ -20,6 +20,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.annotation.RestrictTo
 import androidx.room.migration.AutoMigrationSpec
+import androidx.room.util.isMigrationRequired as isMigrationRequiredExt
+import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import java.io.File
 import java.io.InputStream
@@ -30,7 +32,7 @@ import java.util.concurrent.Executor
  * Configuration class for a [RoomDatabase].
  */
 @Suppress("UNUSED_PARAMETER")
-open class DatabaseConfiguration
+actual open class DatabaseConfiguration
 @SuppressLint("LambdaLast")
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
 constructor(
@@ -44,19 +46,19 @@ constructor(
      * The name of the database file or null if it is an in-memory database.
      */
     @JvmField
-    val name: String?,
+    actual val name: String?,
 
     /**
      * The factory to use to access the database.
      */
     @JvmField
-    val sqliteOpenHelperFactory: SupportSQLiteOpenHelper.Factory,
+    val sqliteOpenHelperFactory: SupportSQLiteOpenHelper.Factory?,
 
     /**
      * Collection of available migrations.
      */
     @JvmField
-    val migrationContainer: RoomDatabase.MigrationContainer,
+    actual val migrationContainer: RoomDatabase.MigrationContainer,
 
     @JvmField
     val callbacks: List<RoomDatabase.Callback>?,
@@ -71,7 +73,7 @@ constructor(
      * The journal mode for this database.
      */
     @JvmField
-    val journalMode: RoomDatabase.JournalMode,
+    actual val journalMode: RoomDatabase.JournalMode,
 
     /**
      * The Executor used to execute asynchronous queries.
@@ -95,12 +97,12 @@ constructor(
     val multiInstanceInvalidationServiceIntent: Intent?,
 
     @JvmField
-    val requireMigration: Boolean,
+    actual val requireMigration: Boolean,
 
     @JvmField
-    val allowDestructiveMigrationOnDowngrade: Boolean,
+    actual val allowDestructiveMigrationOnDowngrade: Boolean,
 
-    private val migrationNotRequiredFrom: Set<Int>?,
+    internal actual val migrationNotRequiredFrom: Set<Int>?,
 
     @JvmField
     val copyFromAssetPath: String?,
@@ -115,13 +117,16 @@ constructor(
     val prepackagedDatabaseCallback: RoomDatabase.PrepackagedDatabaseCallback?,
 
     @JvmField
-    val typeConverters: List<Any>,
+    actual val typeConverters: List<Any>,
 
     @JvmField
-    val autoMigrationSpecs: List<AutoMigrationSpec>,
+    actual val autoMigrationSpecs: List<AutoMigrationSpec>,
 
     @JvmField
     val allowDestructiveMigrationForAllTables: Boolean,
+
+    @JvmField
+    actual val sqliteDriver: SQLiteDriver?
 ) {
     /**
      * If true, table invalidation in an instance of [RoomDatabase] is broadcast and
@@ -182,6 +187,7 @@ constructor(
         typeConverters = emptyList(),
         autoMigrationSpecs = emptyList(),
         allowDestructiveMigrationForAllTables = false,
+        sqliteDriver = null,
     )
 
     /**
@@ -204,6 +210,7 @@ constructor(
      * aren't required.
      *
      */
+    @OptIn(ExperimentalRoomApi::class)
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
     @Deprecated("This constructor is deprecated.")
     constructor(
@@ -244,6 +251,7 @@ constructor(
         typeConverters = emptyList(),
         autoMigrationSpecs = emptyList(),
         allowDestructiveMigrationForAllTables = false,
+        sqliteDriver = null,
     )
 
     /**
@@ -268,6 +276,7 @@ constructor(
      * @param copyFromFile The pre-packaged database file.
      *
      */
+    @OptIn(ExperimentalRoomApi::class)
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
     @Deprecated("This constructor is deprecated.")
     constructor(
@@ -310,6 +319,7 @@ constructor(
         typeConverters = emptyList(),
         autoMigrationSpecs = emptyList(),
         allowDestructiveMigrationForAllTables = false,
+        sqliteDriver = null,
     )
 
     /**
@@ -336,6 +346,7 @@ constructor(
      * pre-package database file will be copied from.
      *
      */
+    @OptIn(ExperimentalRoomApi::class)
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
     @Deprecated("This constructor is deprecated.")
     constructor(
@@ -379,6 +390,7 @@ constructor(
         typeConverters = emptyList(),
         autoMigrationSpecs = emptyList(),
         allowDestructiveMigrationForAllTables = false,
+        sqliteDriver = null,
     )
 
     /**
@@ -406,6 +418,7 @@ constructor(
      * @param prepackagedDatabaseCallback The pre-packaged callback.
      *
      */
+    @OptIn(ExperimentalRoomApi::class)
     @SuppressLint("LambdaLast")
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
     @Deprecated("This constructor is deprecated.")
@@ -451,6 +464,7 @@ constructor(
         typeConverters = emptyList(),
         autoMigrationSpecs = emptyList(),
         allowDestructiveMigrationForAllTables = false,
+        sqliteDriver = null,
     )
 
     /**
@@ -479,6 +493,7 @@ constructor(
      * @param typeConverters The type converters.
      *
      */
+    @OptIn(ExperimentalRoomApi::class)
     @SuppressLint("LambdaLast")
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
     @Deprecated("This constructor is deprecated.")
@@ -525,6 +540,7 @@ constructor(
         typeConverters = typeConverters,
         autoMigrationSpecs = emptyList(),
         allowDestructiveMigrationForAllTables = false,
+        sqliteDriver = null,
     )
 
     /**
@@ -554,6 +570,7 @@ constructor(
      * @param autoMigrationSpecs The auto migration specs.
      *
      */
+    @OptIn(ExperimentalRoomApi::class)
     @SuppressLint("LambdaLast")
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
     @Deprecated("This constructor is deprecated.")
@@ -601,6 +618,7 @@ constructor(
         typeConverters = typeConverters,
         autoMigrationSpecs = autoMigrationSpecs,
         allowDestructiveMigrationForAllTables = false,
+        sqliteDriver = null,
     )
 
     /**
@@ -675,6 +693,54 @@ constructor(
         typeConverters = typeConverters,
         autoMigrationSpecs = autoMigrationSpecs,
         allowDestructiveMigrationForAllTables = false,
+        sqliteDriver = null,
+    )
+
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+    @Deprecated("This constructor is deprecated.")
+    constructor(
+        context: Context,
+        name: String?,
+        sqliteOpenHelperFactory: SupportSQLiteOpenHelper.Factory,
+        migrationContainer: RoomDatabase.MigrationContainer,
+        callbacks: List<RoomDatabase.Callback>?,
+        allowMainThreadQueries: Boolean,
+        journalMode: RoomDatabase.JournalMode,
+        queryExecutor: Executor,
+        transactionExecutor: Executor,
+        multiInstanceInvalidationServiceIntent: Intent?,
+        requireMigration: Boolean,
+        allowDestructiveMigrationOnDowngrade: Boolean,
+        migrationNotRequiredFrom: Set<Int>?,
+        copyFromAssetPath: String?,
+        copyFromFile: File?,
+        copyFromInputStream: Callable<InputStream>?,
+        prepackagedDatabaseCallback: RoomDatabase.PrepackagedDatabaseCallback?,
+        typeConverters: List<Any>,
+        autoMigrationSpecs: List<AutoMigrationSpec>,
+        allowDestructiveMigrationForAllTables: Boolean,
+    ) : this(
+        context = context,
+        name = name,
+        sqliteOpenHelperFactory = sqliteOpenHelperFactory,
+        migrationContainer = migrationContainer,
+        callbacks = callbacks,
+        allowMainThreadQueries = allowMainThreadQueries,
+        journalMode = journalMode,
+        queryExecutor = queryExecutor,
+        transactionExecutor = transactionExecutor,
+        multiInstanceInvalidationServiceIntent = multiInstanceInvalidationServiceIntent,
+        allowDestructiveMigrationOnDowngrade = allowDestructiveMigrationOnDowngrade,
+        requireMigration = requireMigration,
+        migrationNotRequiredFrom = migrationNotRequiredFrom,
+        copyFromAssetPath = copyFromAssetPath,
+        copyFromFile = copyFromFile,
+        prepackagedDatabaseCallback = null,
+        copyFromInputStream = copyFromInputStream,
+        typeConverters = typeConverters,
+        autoMigrationSpecs = autoMigrationSpecs,
+        allowDestructiveMigrationForAllTables = allowDestructiveMigrationForAllTables,
+        sqliteDriver = null,
     )
 
     /**
@@ -701,17 +767,54 @@ constructor(
      * @return True if a valid migration is required, false otherwise.
      */
     open fun isMigrationRequired(fromVersion: Int, toVersion: Int): Boolean {
-        // Migrations are not required if its a downgrade AND destructive migration during downgrade
-        // has been allowed.
-        val isDowngrade = fromVersion > toVersion
-        if (isDowngrade && allowDestructiveMigrationOnDowngrade) {
-            return false
-        } else {
-            // Migrations are required between the two versions if we generally require migrations
-            // AND EITHER there are no exceptions OR the supplied fromVersion is not one of the
-            // exceptions.
-            return requireMigration && (migrationNotRequiredFrom == null ||
-                !migrationNotRequiredFrom.contains(fromVersion))
-        }
+        return isMigrationRequiredExt(fromVersion, toVersion)
     }
+
+    internal fun copy(
+        context: Context = this.context,
+        name: String? = this.name,
+        sqliteOpenHelperFactory: SupportSQLiteOpenHelper.Factory? = this.sqliteOpenHelperFactory,
+        migrationContainer: RoomDatabase.MigrationContainer = this.migrationContainer,
+        callbacks: List<RoomDatabase.Callback>? = this.callbacks,
+        allowMainThreadQueries: Boolean = this.allowMainThreadQueries,
+        journalMode: RoomDatabase.JournalMode = this.journalMode,
+        queryExecutor: Executor = this.queryExecutor,
+        transactionExecutor: Executor = this.transactionExecutor,
+        multiInstanceInvalidationServiceIntent: Intent? =
+            this.multiInstanceInvalidationServiceIntent,
+        requireMigration: Boolean = this.requireMigration,
+        allowDestructiveMigrationOnDowngrade: Boolean = this.allowDestructiveMigrationOnDowngrade,
+        migrationNotRequiredFrom: Set<Int>? = this.migrationNotRequiredFrom,
+        copyFromAssetPath: String? = this.copyFromAssetPath,
+        copyFromFile: File? = this.copyFromFile,
+        copyFromInputStream: Callable<InputStream>? = this.copyFromInputStream,
+        prepackagedDatabaseCallback: RoomDatabase.PrepackagedDatabaseCallback? =
+            this.prepackagedDatabaseCallback,
+        typeConverters: List<Any> = this.typeConverters,
+        autoMigrationSpecs: List<AutoMigrationSpec> = this.autoMigrationSpecs,
+        allowDestructiveMigrationForAllTables: Boolean = this.allowDestructiveMigrationForAllTables,
+        sqliteDriver: SQLiteDriver? = this.sqliteDriver
+    ) = DatabaseConfiguration(
+        context,
+        name,
+        sqliteOpenHelperFactory,
+        migrationContainer,
+        callbacks,
+        allowMainThreadQueries,
+        journalMode,
+        queryExecutor,
+        transactionExecutor,
+        multiInstanceInvalidationServiceIntent,
+        requireMigration,
+        allowDestructiveMigrationOnDowngrade,
+        migrationNotRequiredFrom,
+        copyFromAssetPath,
+        copyFromFile,
+        copyFromInputStream,
+        prepackagedDatabaseCallback,
+        typeConverters,
+        autoMigrationSpecs,
+        allowDestructiveMigrationForAllTables,
+        sqliteDriver,
+    )
 }

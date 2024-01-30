@@ -16,11 +16,8 @@
 
 package androidx.paging
 
-import androidx.kruth.assertThat
-import androidx.paging.LoadState.NotLoading
 import androidx.paging.LoadType.APPEND
 import androidx.paging.LoadType.PREPEND
-import androidx.paging.PageStore.ProcessPageEventCallback
 import androidx.paging.PagingSource.LoadResult.Page.Companion.COUNT_UNDEFINED
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,15 +47,13 @@ internal fun <T : Any> PageStore<T>.insertPage(
     isPrepend: Boolean,
     page: List<T>,
     placeholdersRemaining: Int,
-    callback: ProcessPageEventCallback
 ) = processEvent(
     adjacentInsertEvent(
         isPrepend = isPrepend,
         page = page,
         originalPageOffset = 0,
         placeholdersRemaining = placeholdersRemaining
-    ),
-    callback
+    )
 )
 
 internal fun <T : Any> PageStore<T>.dropPages(
@@ -66,15 +61,13 @@ internal fun <T : Any> PageStore<T>.dropPages(
     minPageOffset: Int,
     maxPageOffset: Int,
     placeholdersRemaining: Int,
-    callback: ProcessPageEventCallback
 ) = processEvent(
     PageEvent.Drop(
         loadType = if (isPrepend) PREPEND else APPEND,
         minPageOffset = minPageOffset,
         maxPageOffset = maxPageOffset,
         placeholdersRemaining = placeholdersRemaining
-    ),
-    callback
+    )
 )
 
 internal fun <T : Any> PageStore<T>.asList() = List(size) { get(it) }
@@ -86,7 +79,6 @@ class PageStoreTest {
         initialNulls: Int,
         newItems: Int,
         newNulls: Int = COUNT_UNDEFINED,
-        events: List<PresenterEvent>
     ) {
         val data = PageStore(
             pages = mutableListOf(List(initialItems) { 'a' + it }),
@@ -95,13 +87,11 @@ class PageStoreTest {
             indexOfInitialPage = 0
         )
 
-        val callback = ProcessPageEventCallbackCapture()
-        val page: List<Char> = List(newItems) { 'a' + it + initialItems }
-        data.insertPage(
+        val inserted = List(newItems) { 'a' + it + initialItems }
+        val event = data.insertPage(
             isPrepend = false,
-            page = page,
+            page = inserted,
             placeholdersRemaining = newNulls,
-            callback = callback
         )
 
         // Assert list contents first (since this shows more obvious errors)...
@@ -114,8 +104,16 @@ class PageStoreTest {
             List(initialItems + newItems) { 'a' + it } + List(expectedNulls) { null }
         assertEquals(expectedData, data.asList())
 
-        // ... then assert events
-        assertEquals(events + IDLE_EVENTS, callback.getAllAndClear())
+        // Then assert we got the right PagingDataEvent
+        assertEquals(
+            PagingDataEvent.Append(
+                startIndex = initialItems,
+                inserted = inserted,
+                newPlaceholdersAfter = newNulls,
+                oldPlaceholdersAfter = initialNulls
+            ),
+            event
+        )
     }
 
     private fun verifyPrepend(
@@ -123,7 +121,6 @@ class PageStoreTest {
         initialNulls: Int,
         newItems: Int,
         newNulls: Int,
-        events: List<PresenterEvent>
     ) {
         val data = PageStore(
             pages = mutableListOf(List(initialItems) { 'z' + it - initialItems - 1 }),
@@ -133,12 +130,11 @@ class PageStoreTest {
         )
 
         val endItemCount = newItems + initialItems
-        val callback = ProcessPageEventCallbackCapture()
-        data.insertPage(
+        val inserted = List(newItems) { 'z' + it - endItemCount - 1 }
+        val event = data.insertPage(
             isPrepend = true,
-            page = List(newItems) { 'z' + it - endItemCount - 1 },
+            page = inserted,
             placeholdersRemaining = newNulls,
-            callback = callback
         )
 
         // Assert list contents first (since this shows more obvious errors)...
@@ -151,8 +147,15 @@ class PageStoreTest {
             List(expectedNulls) { null } + List(endItemCount) { 'z' + it - endItemCount - 1 }
         assertEquals(expectedData, data.asList())
 
-        // ... then assert events
-        assertEquals(events + IDLE_EVENTS, callback.getAllAndClear())
+        // Then assert we got the right PagingDataEvent
+        assertEquals(
+            PagingDataEvent.Prepend(
+                inserted = inserted,
+                newPlaceholdersBefore = newNulls,
+                oldPlaceholdersBefore = initialNulls
+            ),
+            event
+        )
     }
 
     private fun verifyPrependAppend(
@@ -160,11 +163,9 @@ class PageStoreTest {
         initialNulls: Int,
         newItems: Int,
         newNulls: Int,
-        prependEvents: List<PresenterEvent>,
-        appendEvents: List<PresenterEvent>
     ) {
-        verifyPrepend(initialItems, initialNulls, newItems, newNulls, prependEvents)
-        verifyAppend(initialItems, initialNulls, newItems, newNulls, appendEvents)
+        verifyPrepend(initialItems, initialNulls, newItems, newNulls)
+        verifyAppend(initialItems, initialNulls, newItems, newNulls)
     }
 
     @Test
@@ -173,8 +174,6 @@ class PageStoreTest {
         initialNulls = 0,
         newItems = 0,
         newNulls = 0,
-        prependEvents = emptyList(),
-        appendEvents = emptyList()
     )
 
     @Test
@@ -183,12 +182,6 @@ class PageStoreTest {
         initialNulls = 0,
         newItems = 2,
         newNulls = 0,
-        prependEvents = listOf(
-            InsertEvent(0, 2)
-        ),
-        appendEvents = listOf(
-            InsertEvent(2, 2)
-        )
     )
 
     @Test
@@ -197,12 +190,6 @@ class PageStoreTest {
         initialNulls = 4,
         newItems = 2,
         newNulls = 2,
-        prependEvents = listOf(
-            ChangeEvent(2, 2)
-        ),
-        appendEvents = listOf(
-            ChangeEvent(2, 2)
-        )
     )
 
     @Test
@@ -211,15 +198,6 @@ class PageStoreTest {
         initialNulls = 0,
         newItems = 2,
         newNulls = 3,
-        prependEvents = listOf(
-            InsertEvent(0, 2),
-            InsertEvent(0, 3)
-        ),
-        appendEvents = listOf(
-            // NOTE: theoretically these could be combined
-            InsertEvent(2, 2),
-            InsertEvent(4, 3)
-        )
     )
 
     @Test
@@ -228,12 +206,6 @@ class PageStoreTest {
         initialNulls = 0,
         newItems = 0,
         newNulls = 3,
-        prependEvents = listOf(
-            InsertEvent(0, 3)
-        ),
-        appendEvents = listOf(
-            InsertEvent(2, 3)
-        )
     )
 
     @Test
@@ -242,14 +214,6 @@ class PageStoreTest {
         initialNulls = 3,
         newItems = 2,
         newNulls = 2,
-        prependEvents = listOf(
-            ChangeEvent(1, 2),
-            InsertEvent(0, 1)
-        ),
-        appendEvents = listOf(
-            ChangeEvent(2, 2),
-            InsertEvent(5, 1)
-        )
     )
 
     @Test
@@ -258,14 +222,6 @@ class PageStoreTest {
         initialNulls = 7,
         newItems = 2,
         newNulls = 0,
-        prependEvents = listOf(
-            ChangeEvent(5, 2),
-            RemoveEvent(0, 5)
-        ),
-        appendEvents = listOf(
-            ChangeEvent(2, 2),
-            RemoveEvent(4, 5)
-        )
     )
 
     @Test
@@ -274,22 +230,14 @@ class PageStoreTest {
         initialNulls = 10,
         newItems = 3,
         newNulls = 4,
-        prependEvents = listOf(
-            ChangeEvent(7, 3),
-            RemoveEvent(0, 3)
-        ),
-        appendEvents = listOf(
-            ChangeEvent(2, 3),
-            RemoveEvent(9, 3)
-        )
     )
 
     private fun verifyDropEnd(
         initialPages: List<List<Char>>,
         initialNulls: Int = 0,
         newNulls: Int,
+        dropCount: Int,
         pagesToDrop: Int,
-        events: List<PresenterEvent>
     ) {
         if (initialPages.size < 2) {
             fail("require at least 2 pages")
@@ -304,20 +252,23 @@ class PageStoreTest {
 
         assertEquals(initialPages.flatten() + List<Char?>(initialNulls) { null }, data.asList())
 
-        val callback = ProcessPageEventCallbackCapture()
-        data.dropPages(
+        val event = data.dropPages(
             isPrepend = false,
             minPageOffset = initialPages.lastIndex - (pagesToDrop - 1),
             maxPageOffset = initialPages.lastIndex,
             placeholdersRemaining = newNulls,
-            callback = callback
         )
 
-        assertThat(callback.getAllAndClear()).isEqualTo(
-            events + listOf(StateEvent(APPEND, false, NotLoading.Incomplete))
+        // assert PagingDataEvent and final list state
+        assertEquals(
+            PagingDataEvent.DropAppend(
+                startIndex = initialPages.flatten().size - dropCount,
+                dropCount = dropCount,
+                newPlaceholdersAfter = newNulls,
+                oldPlaceholdersAfter = initialNulls
+            ),
+            event
         )
-
-        // assert final list state
         val finalData = initialPages.subList(0, initialPages.size - pagesToDrop).flatten()
         assertEquals(finalData + List<Char?>(newNulls) { null }, data.asList())
     }
@@ -326,8 +277,8 @@ class PageStoreTest {
         initialPages: List<List<Char>>,
         initialNulls: Int = 0,
         newNulls: Int,
+        dropCount: Int,
         pagesToDrop: Int,
-        events: List<PresenterEvent>
     ) {
         if (initialPages.size < 2) {
             fail("require at least 2 pages")
@@ -345,20 +296,22 @@ class PageStoreTest {
             data.asList()
         )
 
-        val callback = ProcessPageEventCallbackCapture()
-        data.dropPages(
+        val event = data.dropPages(
             isPrepend = true,
             minPageOffset = 0,
             maxPageOffset = pagesToDrop - 1,
             placeholdersRemaining = newNulls,
-            callback = callback
         )
 
-        assertThat(callback.getAllAndClear()).isEqualTo(
-            events + listOf(StateEvent(PREPEND, false, NotLoading.Incomplete))
+        // assert PagingDataEvent and final list state
+        assertEquals(
+            PagingDataEvent.DropPrepend(
+                dropCount = dropCount,
+                oldPlaceholdersBefore = initialNulls,
+                newPlaceholdersBefore = newNulls
+            ),
+            event
         )
-
-        // assert final list state
         val finalData = initialPages.take(initialPages.size - pagesToDrop).reversed().flatten()
         assertEquals(List<Char?>(newNulls) { null } + finalData, data.asList())
     }
@@ -368,11 +321,10 @@ class PageStoreTest {
         initialNulls: Int = 0,
         newNulls: Int,
         pagesToDrop: Int,
-        startEvents: List<PresenterEvent>,
-        endEvents: List<PresenterEvent>
     ) {
-        verifyDropStart(initialPages, initialNulls, newNulls, pagesToDrop, startEvents)
-        verifyDropEnd(initialPages, initialNulls, newNulls, pagesToDrop, endEvents)
+        val dropCount = initialPages.reversed().take(pagesToDrop).flatten().size
+        verifyDropStart(initialPages, initialNulls, newNulls, dropCount, pagesToDrop)
+        verifyDropEnd(initialPages, initialNulls, newNulls, dropCount, pagesToDrop)
     }
 
     @Test
@@ -385,8 +337,6 @@ class PageStoreTest {
         initialNulls = 0,
         newNulls = 0,
         pagesToDrop = 2,
-        startEvents = listOf(RemoveEvent(0, 3)),
-        endEvents = listOf(RemoveEvent(2, 3))
     )
 
     @Test
@@ -399,8 +349,6 @@ class PageStoreTest {
         initialNulls = 1,
         newNulls = 4,
         pagesToDrop = 2,
-        startEvents = listOf(ChangeEvent(1, 3)),
-        endEvents = listOf(ChangeEvent(2, 3))
     )
 
     @Test
@@ -413,14 +361,6 @@ class PageStoreTest {
         initialNulls = 0,
         newNulls = 3,
         pagesToDrop = 2,
-        startEvents = listOf(
-            // [null, null, null, 'a', 'b']
-            ChangeEvent(0, 3)
-        ),
-        endEvents = listOf(
-            // ['a', 'b', null, null, null]
-            ChangeEvent(2, 3)
-        )
     )
 
     @Test
@@ -433,18 +373,6 @@ class PageStoreTest {
         initialNulls = 2,
         newNulls = 4,
         pagesToDrop = 2,
-        startEvents = listOf(
-            // [null, 'e', 'c', 'd', 'a', 'b']
-            RemoveEvent(0, 1),
-            // [null, null, null, null, 'a', 'b']
-            ChangeEvent(1, 3)
-        ),
-        endEvents = listOf(
-            // ['a', 'b', 'c', 'd', 'e', null]
-            RemoveEvent(6, 1),
-            // ['a', 'b', null, null, null, null]
-            ChangeEvent(2, 3)
-        )
     )
 
     @Test
@@ -457,18 +385,6 @@ class PageStoreTest {
         initialNulls = 0,
         newNulls = 1,
         pagesToDrop = 2,
-        startEvents = listOf(
-            // ['d', 'a', 'b']
-            RemoveEvent(0, 2),
-            // [null, 'a', 'b']
-            ChangeEvent(0, 1)
-        ),
-        endEvents = listOf(
-            // ['a', 'b', 'c']
-            RemoveEvent(3, 2),
-            // ['a', 'b', null]
-            ChangeEvent(2, 1)
-        )
     )
 
     @Test
@@ -481,18 +397,6 @@ class PageStoreTest {
         initialNulls = 3,
         newNulls = 1,
         pagesToDrop = 2,
-        startEvents = listOf(
-            // ['d', 'a', 'b']
-            RemoveEvent(0, 5),
-            // [null, 'a', 'b']
-            ChangeEvent(0, 1)
-        ),
-        endEvents = listOf(
-            // ['a', 'b', 'c']
-            RemoveEvent(3, 5),
-            // ['a', 'b', null]
-            ChangeEvent(2, 1)
-        )
     )
 
     @Test
@@ -535,11 +439,5 @@ class PageStoreTest {
         )
 
         assertEquals(listOf(null, 'a', null, null, null), pageStore.snapshot())
-    }
-
-    companion object {
-        val IDLE_EVENTS = listOf<PresenterEvent>(
-            CombinedStateEvent(LoadStates.IDLE, null)
-        )
     }
 }

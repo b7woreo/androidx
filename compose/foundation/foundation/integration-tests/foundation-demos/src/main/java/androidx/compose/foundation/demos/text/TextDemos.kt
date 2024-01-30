@@ -21,10 +21,12 @@ import androidx.compose.foundation.demos.text2.BasicTextField2CustomPinFieldDemo
 import androidx.compose.foundation.demos.text2.BasicTextField2Demos
 import androidx.compose.foundation.demos.text2.BasicTextField2FilterDemos
 import androidx.compose.foundation.demos.text2.BasicTextField2LongTextDemo
+import androidx.compose.foundation.demos.text2.BasicTextField2OutputTransformationDemos
 import androidx.compose.foundation.demos.text2.BasicTextField2ValueCallbackDemo
 import androidx.compose.foundation.demos.text2.DecorationBoxDemos
 import androidx.compose.foundation.demos.text2.KeyboardActionsDemos
 import androidx.compose.foundation.demos.text2.KeyboardOptionsDemos
+import androidx.compose.foundation.demos.text2.ReceiveContentBasicTextField2
 import androidx.compose.foundation.demos.text2.ScrollableDemos
 import androidx.compose.foundation.demos.text2.ScrollableDemosRtl
 import androidx.compose.foundation.demos.text2.SwapFieldSameStateDemo
@@ -83,13 +85,15 @@ val TextDemos = DemoCategory(
                             TextOverflowVisibleInPopupDemo()
                         },
                         ComposableDemo("Min/max lines") { BasicTextMinMaxLinesDemo() },
+                        ComposableDemo("Get last character after clip") {
+                            LastClippedCharacterDemo()
+                        }
                     )
                 ),
                 ComposableDemo("IncludeFontPadding & Clip") { TextFontPaddingDemo() },
                 ComposableDemo("Line Height Behavior") { TextLineHeightDemo() },
                 ComposableDemo("Layout Reuse") { TextReuseLayoutDemo() },
                 ComposableDemo("Multi paragraph") { MultiParagraphDemo() },
-                ComposableDemo("Interactive text") { InteractiveTextDemo() },
             )
         ),
         DemoCategory(
@@ -143,6 +147,7 @@ val TextDemos = DemoCategory(
                 ComposableDemo("Tail Following Text Field") { TailFollowingTextFieldDemo() },
                 ComposableDemo("Secondary input system") { PlatformTextInputAdapterDemo() },
                 ComposableDemo("Read-only field") { ReadOnlyTextFieldDemo() },
+                ComposableDemo("Interop") { InteropTextFieldDemo() }
             )
         ),
         DemoCategory(
@@ -159,6 +164,10 @@ val TextDemos = DemoCategory(
                     ComposableDemo("Rtl") { ScrollableDemosRtl() },
                 )),
                 ComposableDemo("Filters") { BasicTextField2FilterDemos() },
+                ComposableDemo("Receive Content") { ReceiveContentBasicTextField2() },
+                ComposableDemo("Output transformation") {
+                    BasicTextField2OutputTransformationDemos()
+                },
                 ComposableDemo("Secure Field") { BasicSecureTextFieldDemos() },
                 ComposableDemo("Swap the field but reuse the state") { SwapFieldSameStateDemo() },
                 ComposableDemo("Custom PIN field") { BasicTextField2CustomPinFieldDemo() },
@@ -189,6 +198,14 @@ val TextDemos = DemoCategory(
                 ComposableDemo("\uD83D\uDD75️ IfNotEmptyText") { MemoryAllocsIfNotEmptyText() },
                 ComposableDemo("\uD83E\uDDA5 LazyList reuse") { MemoryAllocsLazyList() }
             )
+        ),
+        DemoCategory(
+            "Interactive text",
+            listOf(
+                ComposableDemo("ClickableText with hover") { InteractiveTextDemo() },
+                ComposableDemo("\uD83D\uDD17 Hyperlinks") { Hyperlinks() }
+            )
         )
+
     )
 )

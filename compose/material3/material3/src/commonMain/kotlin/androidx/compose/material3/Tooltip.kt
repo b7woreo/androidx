@@ -26,16 +26,12 @@ import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.MutatorMutex
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.paddingFromBaseline
-import androidx.compose.foundation.layout.requiredHeightIn
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.tokens.PlainTooltipTokens
 import androidx.compose.material3.tokens.RichTooltipTokens
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -50,6 +46,7 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -83,6 +80,10 @@ import kotlinx.coroutines.withTimeout
  *
  * @sample androidx.compose.material3.samples.PlainTooltipWithCaret
  *
+ * Plain tooltip shown on long press with a custom [CaretProperties]
+ *
+ * @sample androidx.compose.material3.samples.PlainTooltipWithCustomCaret
+ *
  * Tooltip that is invoked when the anchor is long pressed:
  *
  * @sample androidx.compose.material3.samples.RichTooltipSample
@@ -90,6 +91,14 @@ import kotlinx.coroutines.withTimeout
  * If control of when the tooltip is shown is desired please see
  *
  * @sample androidx.compose.material3.samples.RichTooltipWithManualInvocationSample
+ *
+ * Rich tooltip with caret shown on long press:
+ *
+ * @sample androidx.compose.material3.samples.RichTooltipWithCaretSample
+ *
+ * Rich tooltip shown on long press with a custom [CaretProperties]
+ *
+ * @sample androidx.compose.material3.samples.RichTooltipWithCustomCaretSample
  *
  * @param positionProvider [PopupPositionProvider] that will be used to place the tooltip
  * relative to the anchor content.
@@ -116,6 +125,7 @@ fun TooltipBox(
     enableUserInput: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    @Suppress("DEPRECATION")
     val transition = updateTransition(state.transition, label = "tooltip transition")
     var anchorBounds: LayoutCoordinates? by remember { mutableStateOf(null) }
     val scope = remember {
@@ -183,13 +193,45 @@ interface CaretScope {
 @ExperimentalMaterial3Api
 expect fun CaretScope.PlainTooltip(
     modifier: Modifier = Modifier,
-    caretProperties: (CaretProperties)? = null,
+    caretProperties: CaretProperties? = null,
     shape: Shape = TooltipDefaults.plainTooltipContainerShape,
     contentColor: Color = TooltipDefaults.plainTooltipContentColor,
     containerColor: Color = TooltipDefaults.plainTooltipContainerColor,
     tonalElevation: Dp = 0.dp,
     shadowElevation: Dp = 0.dp,
     content: @Composable () -> Unit
+)
+
+/**
+ * Rich text tooltip that allows the user to pass in a title, text, and action.
+ * Tooltips are used to provide a descriptive message.
+ *
+ * Usually used with [TooltipBox]
+ *
+ * @param modifier the [Modifier] to be applied to the tooltip.
+ * @param title An optional title for the tooltip.
+ * @param action An optional action for the tooltip.
+ * @param caretProperties [CaretProperties] for the caret of the tooltip, if a default
+ * caret is desired with a specific dimension. Pass in null for this parameter if no
+ * caret is desired.
+ * @param shape the [Shape] that should be applied to the tooltip container.
+ * @param colors [RichTooltipColors] that will be applied to the tooltip's container and content.
+ * @param tonalElevation the tonal elevation of the tooltip.
+ * @param shadowElevation the shadow elevation of the tooltip.
+ * @param text the composable that will be used to populate the rich tooltip's text.
+ */
+@Composable
+@ExperimentalMaterial3Api
+expect fun CaretScope.RichTooltip(
+    modifier: Modifier = Modifier,
+    title: (@Composable () -> Unit)? = null,
+    action: (@Composable () -> Unit)? = null,
+    caretProperties: CaretProperties? = null,
+    shape: Shape = TooltipDefaults.richTooltipContainerShape,
+    colors: RichTooltipColors = TooltipDefaults.richTooltipColors(),
+    tonalElevation: Dp = RichTooltipTokens.ContainerElevation,
+    shadowElevation: Dp = RichTooltipTokens.ContainerElevation,
+    text: @Composable () -> Unit
 )
 
 /**
@@ -204,92 +246,6 @@ data class CaretProperties(
     val caretHeight: Dp,
     val caretWidth: Dp
 )
-
-/**
- * Rich text tooltip that allows the user to pass in a title, text, and action.
- * Tooltips are used to provide a descriptive message.
- *
- * Usually used with [TooltipBox]
- *
- * @param modifier the [Modifier] to be applied to the tooltip.
- * @param title An optional title for the tooltip.
- * @param action An optional action for the tooltip.
- * @param shape the [Shape] that should be applied to the tooltip container.
- * @param colors [RichTooltipColors] that will be applied to the tooltip's container and content.
- * @param tonalElevation the tonal elevation of the tooltip.
- * @param shadowElevation the shadow elevation of the tooltip.
- * @param text the composable that will be used to populate the rich tooltip's text.
- */
-@Composable
-@ExperimentalMaterial3Api
-fun RichTooltip(
-    modifier: Modifier = Modifier,
-    title: (@Composable () -> Unit)? = null,
-    action: (@Composable () -> Unit)? = null,
-    shape: Shape = TooltipDefaults.richTooltipContainerShape,
-    colors: RichTooltipColors = TooltipDefaults.richTooltipColors(),
-    tonalElevation: Dp = RichTooltipTokens.ContainerElevation,
-    shadowElevation: Dp = RichTooltipTokens.ContainerElevation,
-    text: @Composable () -> Unit
-) {
-    Surface(
-        modifier = modifier
-            .sizeIn(
-                minWidth = TooltipMinWidth,
-                maxWidth = RichTooltipMaxWidth,
-                minHeight = TooltipMinHeight
-            ),
-        shape = shape,
-        color = colors.containerColor,
-        tonalElevation = tonalElevation,
-        shadowElevation = shadowElevation
-    ) {
-        val actionLabelTextStyle =
-            MaterialTheme.typography.fromToken(RichTooltipTokens.ActionLabelTextFont)
-        val subheadTextStyle =
-            MaterialTheme.typography.fromToken(RichTooltipTokens.SubheadFont)
-        val supportingTextStyle =
-            MaterialTheme.typography.fromToken(RichTooltipTokens.SupportingTextFont)
-
-        Column(
-            modifier = Modifier.padding(horizontal = RichTooltipHorizontalPadding)
-        ) {
-            title?.let {
-                Box(
-                    modifier = Modifier.paddingFromBaseline(top = HeightToSubheadFirstLine)
-                ) {
-                    CompositionLocalProvider(
-                        LocalContentColor provides colors.titleContentColor,
-                        LocalTextStyle provides subheadTextStyle,
-                        content = it
-                    )
-                }
-            }
-            Box(
-                modifier = Modifier.textVerticalPadding(title != null, action != null)
-            ) {
-                CompositionLocalProvider(
-                    LocalContentColor provides colors.contentColor,
-                    LocalTextStyle provides supportingTextStyle,
-                    content = text
-                )
-            }
-            action?.let {
-                Box(
-                    modifier = Modifier
-                        .requiredHeightIn(min = ActionLabelMinHeight)
-                        .padding(bottom = ActionLabelBottomPadding)
-                ) {
-                    CompositionLocalProvider(
-                        LocalContentColor provides colors.actionContentColor,
-                        LocalTextStyle provides actionLabelTextStyle,
-                        content = it
-                    )
-                }
-            }
-        }
-    }
-}
 
 /**
  * Tooltip defaults that contain default values for both [PlainTooltip] and [RichTooltip]
@@ -331,18 +287,36 @@ object TooltipDefaults {
      * using [RichTooltipTokens] to obtain the default colors.
      */
     @Composable
+    fun richTooltipColors() = MaterialTheme.colorScheme.defaultRichTooltipColors
+
+    /**
+     * Method to create a [RichTooltipColors] for [RichTooltip]
+     * using [RichTooltipTokens] to obtain the default colors.
+     */
+    @Composable
     fun richTooltipColors(
-        containerColor: Color = RichTooltipTokens.ContainerColor.value,
-        contentColor: Color = RichTooltipTokens.SupportingTextColor.value,
-        titleContentColor: Color = RichTooltipTokens.SubheadColor.value,
-        actionContentColor: Color = RichTooltipTokens.ActionLabelTextColor.value,
-    ): RichTooltipColors =
-        RichTooltipColors(
-            containerColor = containerColor,
-            contentColor = contentColor,
-            titleContentColor = titleContentColor,
-            actionContentColor = actionContentColor
-        )
+        containerColor: Color = Color.Unspecified,
+        contentColor: Color = Color.Unspecified,
+        titleContentColor: Color = Color.Unspecified,
+        actionContentColor: Color = Color.Unspecified,
+    ): RichTooltipColors = MaterialTheme.colorScheme.defaultRichTooltipColors.copy(
+        containerColor = containerColor,
+        contentColor = contentColor,
+        titleContentColor = titleContentColor,
+        actionContentColor = actionContentColor
+    )
+
+    internal val ColorScheme.defaultRichTooltipColors: RichTooltipColors
+        get() {
+            return defaultRichTooltipColorsCached ?: RichTooltipColors(
+                containerColor = fromToken(RichTooltipTokens.ContainerColor),
+                contentColor = fromToken(RichTooltipTokens.SupportingTextColor),
+                titleContentColor = fromToken(RichTooltipTokens.SubheadColor),
+                actionContentColor = fromToken(RichTooltipTokens.ActionLabelTextColor),
+            ).also {
+                defaultRichTooltipColorsCached = it
+            }
+        }
 
     /**
      * [PopupPositionProvider] that should be used with [PlainTooltip].
@@ -400,11 +374,11 @@ object TooltipDefaults {
                     layoutDirection: LayoutDirection,
                     popupContentSize: IntSize
                 ): IntOffset {
-                    var x = anchorBounds.right
+                    var x = anchorBounds.left
                     // Try to shift it to the left of the anchor
                     // if the tooltip would collide with the right side of the screen
                     if (x + popupContentSize.width > windowSize.width) {
-                        x = anchorBounds.left - popupContentSize.width
+                        x = anchorBounds.right - popupContentSize.width
                         // Center if it'll also collide with the left side of the screen
                         if (x < 0)
                             x = anchorBounds.left +
@@ -433,6 +407,22 @@ class RichTooltipColors(
     val titleContentColor: Color,
     val actionContentColor: Color
 ) {
+    /**
+     * Returns a copy of this RichTooltipColors, optionally overriding some of the values.
+     * This uses the Color.Unspecified to mean “use the value from the source”
+     */
+    fun copy(
+        containerColor: Color = this.containerColor,
+        contentColor: Color = this.contentColor,
+        titleContentColor: Color = this.titleContentColor,
+        actionContentColor: Color = this.actionContentColor,
+    ) = RichTooltipColors(
+        containerColor.takeOrElse { this.containerColor },
+        contentColor.takeOrElse { this.contentColor },
+        titleContentColor.takeOrElse { this.titleContentColor },
+        actionContentColor.takeOrElse { this.actionContentColor },
+    )
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is RichTooltipColors) return false
@@ -596,7 +586,7 @@ interface TooltipState : BasicTooltipState {
 }
 
 @Stable
-private fun Modifier.textVerticalPadding(
+internal fun Modifier.textVerticalPadding(
     subheadExists: Boolean,
     actionExists: Boolean
 ): Modifier {
@@ -670,13 +660,13 @@ private val PlainTooltipVerticalPadding = 4.dp
 private val PlainTooltipHorizontalPadding = 8.dp
 internal val PlainTooltipContentPadding =
     PaddingValues(PlainTooltipHorizontalPadding, PlainTooltipVerticalPadding)
-private val RichTooltipMaxWidth = 320.dp
+internal val RichTooltipMaxWidth = 320.dp
 internal val RichTooltipHorizontalPadding = 16.dp
-private val HeightToSubheadFirstLine = 28.dp
+internal val HeightToSubheadFirstLine = 28.dp
 private val HeightFromSubheadToTextFirstLine = 24.dp
 private val TextBottomPadding = 16.dp
-private val ActionLabelMinHeight = 36.dp
-private val ActionLabelBottomPadding = 8.dp
+internal val ActionLabelMinHeight = 36.dp
+internal val ActionLabelBottomPadding = 8.dp
 // No specification for fade in and fade out duration, so aligning it with the behavior for snack bar
 internal const val TooltipFadeInDuration = 150
 internal const val TooltipFadeOutDuration = 75

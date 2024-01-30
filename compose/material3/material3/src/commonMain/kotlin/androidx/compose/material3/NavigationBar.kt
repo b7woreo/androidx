@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
@@ -155,9 +156,10 @@ fun NavigationBar(
  * only be shown when this item is selected.
  * @param colors [NavigationBarItemColors] that will be used to resolve the colors used for this
  * item in different states. See [NavigationBarItemDefaults.colors].
- * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
- * for this item. You can create and pass in your own `remember`ed instance to observe
- * [Interaction]s and customize the appearance / behavior of this item in different states.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this item. You can use this to change the item's appearance
+ * or preview the item in different states. Note that if `null` is provided, interactions will
+ * still happen internally.
  */
 @Composable
 fun RowScope.NavigationBarItem(
@@ -169,8 +171,10 @@ fun RowScope.NavigationBarItem(
     label: @Composable (() -> Unit)? = null,
     alwaysShowLabel: Boolean = true,
     colors: NavigationBarItemColors = NavigationBarItemDefaults.colors(),
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
+    interactionSource: MutableInteractionSource? = null
 ) {
+    @Suppress("NAME_SHADOWING")
+    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
     val styledIcon = @Composable {
         val iconColor by colors.iconColor(selected = selected, enabled = enabled)
         // If there's a label, don't have a11y services repeat the icon description.
@@ -235,15 +239,11 @@ fun RowScope.NavigationBarItem(
         // The indicator has a width-expansion animation which interferes with the timing of the
         // ripple, which is why they are separate composables
         val indicatorRipple = @Composable {
-            @Suppress("DEPRECATION_ERROR")
             Box(
                 Modifier
                     .layoutId(IndicatorRippleLayoutIdTag)
                     .clip(NavigationBarTokens.ActiveIndicatorShape.value)
-                    .indication(
-                        offsetInteractionSource,
-                        androidx.compose.material.ripple.rememberRipple()
-                    )
+                    .indication(offsetInteractionSource, rippleOrFallbackImplementation())
             )
         }
         val indicator = @Composable {
@@ -292,6 +292,13 @@ object NavigationBarItemDefaults {
     /**
      * Creates a [NavigationBarItemColors] with the provided colors according to the Material
      * specification.
+     */
+    @Composable
+    fun colors() = MaterialTheme.colorScheme.defaultNavigationBarItemColors
+
+    /**
+     * Creates a [NavigationBarItemColors] with the provided colors according to the Material
+     * specification.
      *
      * @param selectedIconColor the color to use for the icon when the item is selected.
      * @param selectedTextColor the color to use for the text label when the item is selected.
@@ -304,13 +311,13 @@ object NavigationBarItemDefaults {
      */
     @Composable
     fun colors(
-        selectedIconColor: Color = NavigationBarTokens.ActiveIconColor.value,
-        selectedTextColor: Color = NavigationBarTokens.ActiveLabelTextColor.value,
-        indicatorColor: Color = NavigationBarTokens.ActiveIndicatorColor.value,
-        unselectedIconColor: Color = NavigationBarTokens.InactiveIconColor.value,
-        unselectedTextColor: Color = NavigationBarTokens.InactiveLabelTextColor.value,
-        disabledIconColor: Color = unselectedIconColor.copy(alpha = DisabledAlpha),
-        disabledTextColor: Color = unselectedTextColor.copy(alpha = DisabledAlpha),
+        selectedIconColor: Color = Color.Unspecified,
+        selectedTextColor: Color = Color.Unspecified,
+        indicatorColor: Color = Color.Unspecified,
+        unselectedIconColor: Color = Color.Unspecified,
+        unselectedTextColor: Color = Color.Unspecified,
+        disabledIconColor: Color = Color.Unspecified,
+        disabledTextColor: Color = Color.Unspecified,
     ): NavigationBarItemColors = NavigationBarItemColors(
         selectedIconColor = selectedIconColor,
         selectedTextColor = selectedTextColor,
@@ -320,6 +327,24 @@ object NavigationBarItemDefaults {
         disabledIconColor = disabledIconColor,
         disabledTextColor = disabledTextColor,
     )
+
+    internal val ColorScheme.defaultNavigationBarItemColors: NavigationBarItemColors
+        get() {
+            return defaultNavigationBarItemColorsCached ?: NavigationBarItemColors(
+                selectedIconColor = fromToken(NavigationBarTokens.ActiveIconColor),
+                selectedTextColor = fromToken(NavigationBarTokens.ActiveLabelTextColor),
+                selectedIndicatorColor = fromToken(NavigationBarTokens.ActiveIndicatorColor),
+                unselectedIconColor = fromToken(NavigationBarTokens.InactiveIconColor),
+                unselectedTextColor = fromToken(NavigationBarTokens.InactiveLabelTextColor),
+                disabledIconColor =
+                fromToken(NavigationBarTokens.InactiveIconColor).copy(alpha = DisabledAlpha),
+                disabledTextColor =
+                fromToken(NavigationBarTokens.InactiveLabelTextColor).copy(alpha = DisabledAlpha),
+
+                ).also {
+                defaultNavigationBarItemColorsCached = it
+            }
+        }
 
     @Deprecated(
         "Use overload with disabledIconColor and disabledTextColor",
@@ -366,6 +391,28 @@ class NavigationBarItemColors constructor(
     val disabledIconColor: Color,
     val disabledTextColor: Color,
 ) {
+    /**
+     * Returns a copy of this NavigationBarItemColors, optionally overriding some of the values.
+     * This uses the Color.Unspecified to mean “use the value from the source”
+     */
+    fun copy(
+        selectedIconColor: Color = this.selectedIconColor,
+        selectedTextColor: Color = this.selectedTextColor,
+        selectedIndicatorColor: Color = this.selectedIndicatorColor,
+        unselectedIconColor: Color = this.unselectedIconColor,
+        unselectedTextColor: Color = this.unselectedTextColor,
+        disabledIconColor: Color = this.disabledIconColor,
+        disabledTextColor: Color = this.disabledTextColor,
+    ) = NavigationBarItemColors(
+        selectedIconColor.takeOrElse { this.selectedIconColor },
+        selectedTextColor.takeOrElse { this.selectedTextColor },
+        selectedIndicatorColor.takeOrElse { this.selectedIndicatorColor },
+        unselectedIconColor.takeOrElse { this.unselectedIconColor },
+        unselectedTextColor.takeOrElse { this.unselectedTextColor },
+        disabledIconColor.takeOrElse { this.disabledIconColor },
+        disabledTextColor.takeOrElse { this.disabledTextColor },
+    )
+
     /**
      * Represents the icon color for this item, depending on whether it is [selected].
      *

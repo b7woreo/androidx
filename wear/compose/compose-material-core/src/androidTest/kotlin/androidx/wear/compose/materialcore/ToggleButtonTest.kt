@@ -948,10 +948,10 @@ class ToggleButtonTest {
                     .background(testBackground)
             ) {
                 val actualBorderColor = borderColor(enabled, checked).value
-                val border = remember { mutableStateOf(BorderStroke(2.dp, actualBorderColor)) }
+                val border = BorderStroke(2.dp, actualBorderColor)
                 RoundToggleButtonWithDefaults(
                     backgroundColor = backgroundColor,
-                    border = { _, _ -> return@RoundToggleButtonWithDefaults border },
+                    border = { _, _ -> border },
                     enabled = enabled,
                     checked = checked,
                     modifier = Modifier.testTag(TEST_TAG)
@@ -1003,10 +1003,10 @@ private fun RoundToggleButtonWithDefaults(
     enabled: Boolean = true,
     backgroundColor: @Composable (enabled: Boolean, checked: Boolean) -> State<Color> =
         { _, _ -> rememberUpdatedState(DEFAULT_SHAPE_COLOR) },
-    border: @Composable (enabled: Boolean, checked: Boolean) -> State<BorderStroke?>? =
+    border: @Composable (enabled: Boolean, checked: Boolean) -> BorderStroke? =
         { _, _ -> null },
     toggleButtonSize: Dp = 52.dp,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     shape: Shape = CircleShape,
     content: @Composable BoxScope.() -> Unit = {
         TestText(text = "Label")
@@ -1044,7 +1044,7 @@ private fun ToggleButtonWithDefaults(
         Modifier.background(BACKGROUND_COLOR)
     },
     enabled: Boolean = true,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     contentPadding: PaddingValues = PaddingValues(
         start = CHIP_HORIZONTAL_PADDING,
         top = CHIP_VERTICAL_PADDING,
@@ -1093,8 +1093,8 @@ private fun SplitToggleButtonWithDefaults(
             remember { mutableStateOf(SPLIT_BACKGROUND_OVERLAY) }
         },
     enabled: Boolean = true,
-    checkedInteractionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    clickInteractionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    checkedInteractionSource: MutableInteractionSource? = null,
+    clickInteractionSource: MutableInteractionSource? = null,
     contentPadding: PaddingValues = PaddingValues(
         start = CHIP_HORIZONTAL_PADDING,
         top = CHIP_VERTICAL_PADDING,

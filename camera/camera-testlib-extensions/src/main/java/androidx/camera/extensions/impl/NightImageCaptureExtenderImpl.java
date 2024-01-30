@@ -59,9 +59,9 @@ public final class NightImageCaptureExtenderImpl implements ImageCaptureExtender
     private static final String TAG = "NightICExtender";
     private static final int DEFAULT_STAGE_ID = 0;
     private static final int SESSION_STAGE_ID = 101;
-    private static final int EV_INDEX = 10;
+    private static final int EV_INDEX = 2;
 
-    private static final int CAPTURE_STAGET_COUNT = 10;
+    private static final int CAPTURE_STAGET_COUNT = 6;
 
     public NightImageCaptureExtenderImpl() {
     }
@@ -173,7 +173,7 @@ public final class NightImageCaptureExtenderImpl implements ImageCaptureExtender
     @Nullable
     @Override
     public Range<Long> getEstimatedCaptureLatencyRange(@Nullable Size captureOutputSize) {
-        return new Range<>(300L, 1000L);
+        return new Range<>(2600L, 3000L);
     }
 
     @NonNull
@@ -222,7 +222,7 @@ public final class NightImageCaptureExtenderImpl implements ImageCaptureExtender
     @Nullable
     @Override
     public Pair<Long, Long> getRealtimeCaptureLatency() {
-        return new Pair<>(500L, 3000L);
+        return new Pair<>(500L, 2500L);
     }
 
     @Override
@@ -284,19 +284,48 @@ public final class NightImageCaptureExtenderImpl implements ImageCaptureExtender
             }
 
             try {
-                ByteBuffer yByteBuffer = outputImage.getPlanes()[0].getBuffer();
-                ByteBuffer uByteBuffer = outputImage.getPlanes()[2].getBuffer();
-                ByteBuffer vByteBuffer = outputImage.getPlanes()[1].getBuffer();
+                // copy y plane
+                Image.Plane inYPlane = normalImage.getPlanes()[0];
+                Image.Plane outYPlane = outputImage.getPlanes()[0];
+                ByteBuffer inYBuffer = inYPlane.getBuffer();
+                ByteBuffer outYBuffer = outYPlane.getBuffer();
+                int inYPixelStride = inYPlane.getPixelStride();
+                int inYRowStride = inYPlane.getRowStride();
+                int outYPixelStride = outYPlane.getPixelStride();
+                int outYRowStride = outYPlane.getRowStride();
+                for (int x = 0; x < outputImage.getHeight(); x++) {
+                    for (int y = 0; y < outputImage.getWidth(); y++) {
+                        int inIndex = x * inYRowStride + y * inYPixelStride;
+                        int outIndex = x * outYRowStride + y * outYPixelStride;
+                        outYBuffer.put(outIndex, inYBuffer.get(inIndex));
+                    }
+                }
 
-                // Sample here just simply copy/paste the capture image result
-                yByteBuffer.put(normalImage.getPlanes()[0].getBuffer());
                 if (resultCallback != null) {
                     executorForCallback.execute(
                             () -> resultCallback.onCaptureProcessProgressed(50));
                 }
-                uByteBuffer.put(normalImage.getPlanes()[2].getBuffer());
-                vByteBuffer.put(normalImage.getPlanes()[1].getBuffer());
 
+                // Copy UV
+                for (int i = 1; i < 3; i++) {
+                    Image.Plane inPlane = normalImage.getPlanes()[i];
+                    Image.Plane outPlane = outputImage.getPlanes()[i];
+                    ByteBuffer inBuffer = inPlane.getBuffer();
+                    ByteBuffer outBuffer = outPlane.getBuffer();
+                    int inPixelStride = inPlane.getPixelStride();
+                    int inRowStride = inPlane.getRowStride();
+                    int outPixelStride = outPlane.getPixelStride();
+                    int outRowStride = outPlane.getRowStride();
+                    // UV are half width compared to Y
+                    for (int x = 0; x < outputImage.getHeight() / 2; x++) {
+                        for (int y = 0; y < outputImage.getWidth() / 2; y++) {
+                            int inIndex = x * inRowStride + y * inPixelStride;
+                            int outIndex = x * outRowStride + y * outPixelStride;
+                            byte b = inBuffer.get(inIndex);
+                            outBuffer.put(outIndex, b);
+                        }
+                    }
+                }
             } catch (IllegalStateException e) {
                 Log.e(TAG, "Error accessing the Image: " + e);
                 // Since something went wrong, don't try to queue up the image.

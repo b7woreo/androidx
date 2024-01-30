@@ -14,14 +14,38 @@
  * limitations under the License.
  */
 
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
+import androidx.build.KmpPlatformsKt
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import androidx.build.Publish
+import androidx.build.SdkHelperKt
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
+import org.jetbrains.kotlin.konan.target.KonanTarget
 
 plugins {
     id("AndroidXPlugin")
     id("com.android.library")
     id("androidx.stableaidl")
+}
+
+def nativeEnabled = KmpPlatformsKt.enableNative(project)
+
+configurations {
+    // Configuration for resolving shared archive file of androidx's SQLite compilation
+    sqliteSharedArchive {
+        canBeConsumed = false
+        canBeResolved = true
+        attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.NATIVE_LINK))
+        }
+    }
 }
 
 android {
@@ -47,10 +71,16 @@ android {
 }
 
 androidXMultiplatform {
-    mac()
-    linux()
-    ios()
     android()
+    ios() {
+        // Link to sqlite3 available in iOS
+        binaries.all {
+            linkerOpts += ["-lsqlite3"]
+        }
+    }
+    jvm()
+    linux()
+    mac()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
@@ -59,25 +89,39 @@ androidXMultiplatform {
             dependencies {
                 api(libs.kotlinStdlib)
                 api(project(":room:room-common"))
+                api(project(":sqlite:sqlite"))
                 api(projectOrArtifact(":annotation:annotation"))
-                implementation("androidx.annotation:annotation-experimental:1.1.0-rc01")
+                api(libs.kotlinCoroutinesCore)
+                implementation(libs.atomicFu)
             }
         }
         commonTest {
             dependencies {
                 implementation(libs.kotlinTest)
+                implementation(libs.kotlinCoroutinesTest)
                 implementation(project(":kruth:kruth"))
+            }
+        }
+        jvmMain {
+            dependsOn(commonMain)
+        }
+        jvmTest {
+            dependsOn(commonTest)
+            dependencies {
+                implementation(project(":sqlite:sqlite-bundled"))
+                implementation(libs.kotlinTestJunit)
             }
         }
         androidMain {
             dependsOn(commonMain)
             dependencies {
                 api(project(":sqlite:sqlite-framework"))
-                api(project(":sqlite:sqlite"))
+                api(libs.kotlinCoroutinesAndroid)
                 implementation("androidx.arch.core:core-runtime:2.2.0")
                 compileOnly("androidx.collection:collection:1.2.0")
                 compileOnly("androidx.lifecycle:lifecycle-livedata-core:2.0.0")
                 compileOnly("androidx.paging:paging-common:2.0.0")
+                implementation(projectOrArtifact(":annotation:annotation-experimental"))
             }
         }
         androidUnitTest {
@@ -85,16 +129,17 @@ androidXMultiplatform {
             dependencies {
                 implementation("androidx.arch.core:core-testing:2.2.0")
                 implementation(libs.junit)
+                implementation(libs.byteBuddy)
                 implementation(libs.mockitoCore4)
                 implementation(libs.mockitoKotlin4)
                 implementation("androidx.lifecycle:lifecycle-livedata-core:2.0.0")
                 implementation(libs.testRunner) // Needed for @FlakyTest and @Ignore
             }
         }
-
         androidInstrumentedTest {
             dependsOn(commonTest)
             dependencies {
+                implementation(project(":sqlite:sqlite-bundled"))
                 implementation(libs.junit)
                 implementation(libs.testExtJunit)
                 implementation(libs.testCore)
@@ -107,11 +152,50 @@ androidXMultiplatform {
                 implementation("androidx.arch.core:core-testing:2.2.0")
             }
         }
+        if (nativeEnabled) {
+            nativeMain {
+                dependsOn(commonMain)
+                dependencies {
+                    api(project(":sqlite:sqlite-framework"))
+                }
+            }
+            nativeTest {
+                dependsOn(commonTest)
+                dependencies {
+                    implementation(project(":sqlite:sqlite-bundled"))
+                }
+            }
+        }
+        targets.all { target ->
+            if (target.platformType == KotlinPlatformType.native) {
+                target.compilations["main"].defaultSourceSet {
+                    dependsOn(nativeMain)
+                }
+                def test = target.compilations["test"]
+                test.defaultSourceSet {
+                    dependsOn(nativeTest)
+                }
+                if (target.konanTarget == KonanTarget.LINUX_X64.INSTANCE) {
+                    // For tests in Linux host, statically include androidx's compiled SQLite
+                    // via a generated C interop definition
+                    createCinteropFromArchiveConfiguration(test, configurations["sqliteSharedArchive"])
+                } else if (
+                        target.konanTarget == KonanTarget.MACOS_X64.INSTANCE ||
+                                target.konanTarget == KonanTarget.MACOS_ARM64.INSTANCE
+                ) {
+                    // For tests in Mac host, link to shared SQLite library included in MacOS
+                    test.kotlinOptions.freeCompilerArgs += [
+                            "-linker-options", "-lsqlite3"
+                    ]
+                }
+            }
+        }
     }
 }
 
 dependencies {
     lintChecks(project(":room:room-runtime-lint"))
+    sqliteSharedArchive(project(":sqlite:sqlite-bundled"))
 }
 
 androidx {

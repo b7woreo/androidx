@@ -72,7 +72,9 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.assertTouchWidthIsEqualTo
 import androidx.compose.ui.test.assertWidthIsEqualTo
@@ -85,6 +87,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
@@ -312,6 +315,116 @@ class ClickableTest {
         rule.runOnIdle {
             assertThat(counter).isEqualTo(2)
         }
+    }
+
+    @Test
+    fun requestFocus_touchMode() {
+        // Arrange.
+        val tag = "testClickable"
+        val focusRequester = FocusRequester()
+        lateinit var inputModeManager: InputModeManager
+        rule.setContent {
+            inputModeManager = LocalInputModeManager.current
+            Box(
+                Modifier
+                    .testTag(tag)
+                    .size(10.dp)
+                    .focusRequester(focusRequester)
+                    .clickable {}
+            )
+        }
+        rule.runOnIdle {
+            @OptIn(ExperimentalComposeUiApi::class)
+            inputModeManager.requestInputMode(Touch)
+        }
+
+        // Act.
+        rule.runOnIdle { focusRequester.requestFocus() }
+
+        // Assert.
+        rule.onNodeWithTag(tag).assertIsNotFocused()
+    }
+
+    @Test
+    fun requestFocus_keyboardMode() {
+        // Arrange.
+        val tag = "testClickable"
+        val focusRequester = FocusRequester()
+        lateinit var inputModeManager: InputModeManager
+        rule.setContent {
+            inputModeManager = LocalInputModeManager.current
+            Box(
+                Modifier
+                    .testTag(tag)
+                    .size(10.dp)
+                    .focusRequester(focusRequester)
+                    .clickable {}
+            )
+        }
+        rule.runOnIdle {
+            @OptIn(ExperimentalComposeUiApi::class)
+            inputModeManager.requestInputMode(Keyboard)
+        }
+
+        // Act.
+        rule.runOnIdle { focusRequester.requestFocus() }
+
+        // Assert.
+        rule.onNodeWithTag(tag).assertIsFocused()
+    }
+
+    @Test
+    fun requestFocus_withTestApi_touchMode() {
+        // Arrange.
+        val tag = "testClickable"
+        lateinit var inputModeManager: InputModeManager
+        rule.setContent {
+            inputModeManager = LocalInputModeManager.current
+            Box(
+                Modifier
+                    .testTag(tag)
+                    .size(10.dp)
+                    .clickable {}
+            )
+        }
+        rule.runOnIdle {
+            @OptIn(ExperimentalComposeUiApi::class)
+            inputModeManager.requestInputMode(Touch)
+        }
+
+        // Act.
+        rule.onNodeWithTag(tag).requestFocus()
+
+        // Assert.
+        rule.onNodeWithTag(tag).assertIsNotFocused()
+    }
+
+    @Test
+    fun requestFocus_withTestApi_keyboardMode() {
+        // Arrange.
+        val tag = "testClickable"
+        lateinit var inputModeManager: InputModeManager
+        val focusRequester = FocusRequester()
+        rule.setFocusableContent {
+            inputModeManager = LocalInputModeManager.current
+            Box(
+                Modifier
+                    .focusRequester(focusRequester)
+                    .testTag(tag)
+                    .size(10.dp)
+                    .clickable {}
+            )
+        }
+        rule.runOnIdle {
+            @OptIn(ExperimentalComposeUiApi::class)
+            inputModeManager.requestInputMode(Keyboard)
+        }
+
+        // Act.
+        rule.onNodeWithTag(tag).requestFocus()
+
+        // Assert.
+        rule.onNodeWithTag(tag).assertIsFocused()
     }
 
     @Test
@@ -1368,7 +1481,6 @@ class ClickableTest {
                 "onClickLabel",
                 "onClick",
                 "role",
-                "lazilyCreateIndication",
                 "indication",
                 "interactionSource"
             )
@@ -1947,49 +2059,6 @@ class ClickableTest {
     }
 
     @Test
-    fun indicationNodeFactory_interactionSource_lazilyCreateIndicationTrue_pointerInput() {
-        var created = false
-        val interactionSource = MutableInteractionSource()
-        val interactions = mutableListOf<Interaction>()
-        val indication = TestIndicationNodeFactory { _, coroutineScope ->
-            created = true
-            coroutineScope.launch {
-                interactionSource.interactions.collect {
-                    interaction -> interactions.add(interaction)
-                }
-            }
-        }
-
-        rule.setContent {
-            Box(Modifier.padding(10.dp)) {
-                BasicText("ClickableText",
-                    modifier = Modifier
-                        .testTag("clickable")
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = indication,
-                            lazilyCreateIndication = true
-                        ) {}
-                )
-            }
-        }
-
-        rule.runOnIdle {
-            assertThat(created).isFalse()
-        }
-
-        // The touch event should cause the indication node to be created
-        rule.onNodeWithTag("clickable")
-            .performTouchInput { down(center) }
-
-        rule.runOnIdle {
-            assertThat(created).isTrue()
-            assertThat(interactions).hasSize(1)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-        }
-    }
-
-    @Test
     fun indicationNodeFactory_noInteractionSource_lazilyCreated_pointerInput() {
         var created = false
         lateinit var interactionSource: InteractionSource
@@ -2519,117 +2588,6 @@ class ClickableTest {
             assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
         }
     }
-
-    /**
-     * Test case for changing lazilyCreateIndication from true to false before the node was created
-     * - this should cause the indication to be immediately created.
-     */
-    @Test
-    fun indicationNodeFactory_changingLazilyCreateIndicationToFalse_beforeCreation() {
-        var created = false
-        var lazilyCreateIndication by mutableStateOf(true)
-        val interactionSource = MutableInteractionSource()
-        val interactions = mutableListOf<Interaction>()
-        val indication = TestIndicationNodeFactory { _, coroutineScope ->
-            created = true
-            coroutineScope.launch {
-                interactionSource.interactions.collect {
-                        interaction -> interactions.add(interaction)
-                }
-            }
-        }
-
-        rule.setContent {
-            Box(Modifier.padding(10.dp)) {
-                BasicText("ClickableText",
-                    modifier = Modifier
-                        .testTag("clickable")
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = indication,
-                            lazilyCreateIndication = lazilyCreateIndication
-                        ) {}
-                )
-            }
-        }
-
-        rule.runOnIdle {
-            assertThat(created).isFalse()
-            lazilyCreateIndication = false
-        }
-
-        rule.runOnIdle {
-            // Changing lazilyCreateIndication to false should cause us to be created
-            assertThat(created).isTrue()
-        }
-
-        rule.onNodeWithTag("clickable")
-            .performTouchInput { down(center) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(1)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-        }
-    }
-
-    /**
-     * Test case for changing lazilyCreateIndication from true to false after the node was created
-     * - this should not cause a recreation if there were no other changes.
-     */
-    @Test
-    fun indicationNodeFactory_changingLazilyCreateIndicationToFalse_afterCreation() {
-        var created = false
-        var detached = false
-        var lazilyCreateIndication by mutableStateOf(true)
-        val interactionSource = MutableInteractionSource()
-        val interactions = mutableListOf<Interaction>()
-        val indication = TestIndicationNodeFactory(
-            onDetach = { detached = true }
-        ) { _, coroutineScope ->
-            created = true
-            coroutineScope.launch {
-                interactionSource.interactions.collect {
-                        interaction -> interactions.add(interaction)
-                }
-            }
-        }
-
-        rule.setContent {
-            Box(Modifier.padding(10.dp)) {
-                BasicText("ClickableText",
-                    modifier = Modifier
-                        .testTag("clickable")
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = indication,
-                            lazilyCreateIndication = true
-                        ) {}
-                )
-            }
-        }
-
-        rule.runOnIdle {
-            assertThat(created).isFalse()
-        }
-
-        rule.onNodeWithTag("clickable")
-            .performTouchInput { down(center) }
-
-        rule.runOnIdle {
-            assertThat(created).isTrue()
-            assertThat(interactions).hasSize(1)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-        }
-
-        rule.runOnIdle {
-            lazilyCreateIndication = false
-        }
-
-        rule.runOnIdle {
-            // We should not have recreated
-            assertThat(detached).isFalse()
-        }
-    }
 }
 
 /**
@@ -2659,7 +2617,7 @@ private class TestIndication(val onCreate: (InteractionSource) -> Unit) : Indica
  * @param onDetach lambda executed when the instance is detached
  * @param onAttach lambda executed when the instance is created with [create]
  */
-private class TestIndicationNodeFactory(
+internal class TestIndicationNodeFactory(
     val onDetach: () -> Unit = {},
     val onAttach: ((InteractionSource, CoroutineScope) -> Unit)
 ) : IndicationNodeFactory {

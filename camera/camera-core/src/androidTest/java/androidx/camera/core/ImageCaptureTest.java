@@ -63,7 +63,6 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -94,7 +93,7 @@ public class ImageCaptureTest {
 
         UseCaseConfigFactory useCaseConfigFactory = new FakeUseCaseConfigFactory();
         mCameraUseCaseAdapter = new CameraUseCaseAdapter(
-                new LinkedHashSet<>(Collections.singleton(fakeCamera)),
+                fakeCamera,
                 new FakeCameraCoordinator(),
                 fakeCameraDeviceSurfaceManager,
                 useCaseConfigFactory);
@@ -322,7 +321,9 @@ public class ImageCaptureTest {
             repeatingScheduledExecutorService.scheduleAtFixedRate(() -> {
                 for (CameraCaptureCallback callback :
                         imageCapture.getSessionConfig().getRepeatingCameraCaptureCallbacks()) {
-                    callback.onCaptureCompleted(fakeCameraCaptureResult);
+                    int captureConfigId =
+                            imageCapture.getSessionConfig().getRepeatingCaptureConfig().getId();
+                    callback.onCaptureCompleted(captureConfigId, fakeCameraCaptureResult);
                 }
             }, 0, 50, TimeUnit.MILLISECONDS);
         }

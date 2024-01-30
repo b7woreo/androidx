@@ -16,7 +16,6 @@
 
 package com.example.androidx.graphics;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -33,7 +32,6 @@ import android.widget.ListView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.view.ViewCompat;
 import androidx.cursoradapter.widget.ResourceCursorAdapter;
 import androidx.fragment.app.ListFragment;
 import androidx.loader.app.LoaderManager;
@@ -175,7 +173,6 @@ public class PaletteActivity extends AppCompatActivity {
 
             private int mNumColors;
 
-            @SuppressLint("RestrictedApi")
             public PhotosCursorAdapter(Context context, Cursor c) {
                 super(context, R.layout.palette_list_item, c, false);
             }
@@ -195,12 +192,12 @@ public class PaletteActivity extends AppCompatActivity {
                 ImageView imageView = (ImageView) view.findViewById(R.id.image);
                 imageView.setImageDrawable(null);
 
-                ViewCompat.setBackground(view.findViewById(R.id.text_vibrant), null);
-                ViewCompat.setBackground(view.findViewById(R.id.text_muted), null);
-                ViewCompat.setBackground(view.findViewById(R.id.text_light_vibrant), null);
-                ViewCompat.setBackground(view.findViewById(R.id.text_light_muted), null);
-                ViewCompat.setBackground(view.findViewById(R.id.text_dark_vibrant), null);
-                ViewCompat.setBackground(view.findViewById(R.id.text_dark_muted), null);
+                view.findViewById(R.id.text_vibrant).setBackground(null);
+                view.findViewById(R.id.text_muted).setBackground(null);
+                view.findViewById(R.id.text_light_vibrant).setBackground(null);
+                view.findViewById(R.id.text_light_muted).setBackground(null);
+                view.findViewById(R.id.text_dark_vibrant).setBackground(null);
+                view.findViewById(R.id.text_dark_muted).setBackground(null);
 
                 final long id = cursor.getLong(
                         cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID));

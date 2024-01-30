@@ -37,6 +37,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollDispatcher
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.internal.checkPrecondition
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
 import androidx.compose.ui.layout.Measurable
@@ -169,7 +170,7 @@ internal open class AndroidViewHolder(
      */
     private val snapshotObserver: OwnerSnapshotObserver
         get() {
-            check(isAttachedToWindow) {
+            checkPrecondition(isAttachedToWindow) {
                 "Expected AndroidViewHolder to be attached when observing reads."
             }
             return owner.snapshotObserver
@@ -178,7 +179,9 @@ internal open class AndroidViewHolder(
     private val runUpdate: () -> Unit = {
         // If we're not attached, the observer isn't started, so don't bother running it.
         // onAttachedToWindow will run an update the next time the view is attached.
-        if (hasUpdateBlock && isAttachedToWindow) {
+        // Also, the view will have no parent when the node is deactivated. when the node will
+        // be reactivated the update block will be re-executed.
+        if (hasUpdateBlock && isAttachedToWindow && view.parent === this) {
             snapshotObserver.observeReads(this, OnCommitAffectingUpdate, update)
         }
     }

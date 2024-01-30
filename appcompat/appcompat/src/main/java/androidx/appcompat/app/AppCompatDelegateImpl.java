@@ -943,7 +943,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
                 // Floating windows can never have an action bar, reset the flags
                 mHasActionBar = mOverlayActionBar = false;
             } else if (mHasActionBar) {
-                /**
+                /*
                  * This needs some explanation. As we can not use the android:theme attribute
                  * pre-L, we emulate it by manually creating a LayoutInflater using a
                  * ContextThemeWrapper pointing to actionBarTheme.
@@ -966,7 +966,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
                         .findViewById(R.id.decor_content_parent);
                 mDecorContentParent.setWindowCallback(getWindowCallback());
 
-                /**
+                /*
                  * Propagate features to DecorContentParent
                  */
                 if (mOverlayActionBar) {
@@ -1443,7 +1443,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
     final boolean shouldAnimateActionModeView() {
         // We only to animate the action mode in if the sub decor has already been laid out.
         // If it hasn't been laid out, it hasn't been drawn to screen yet.
-        return mSubDecorInstalled && mSubDecor != null && ViewCompat.isLaidOut(mSubDecor);
+        return mSubDecorInstalled && mSubDecor != null && mSubDecor.isLaidOut();
     }
 
     @Override
@@ -1621,6 +1621,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
             TypedArray a = mContext.obtainStyledAttributes(R.styleable.AppCompatTheme);
             String viewInflaterClassName =
                     a.getString(R.styleable.AppCompatTheme_viewInflaterClass);
+            a.recycle();
             if (viewInflaterClassName == null) {
                 // Set to null (the default in all AppCompat themes). Create the base inflater
                 // (no reflection)
@@ -1679,7 +1680,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
                 // added to the hierarchy at the end of the inflate() call.
                 return true;
             } else if (parent == windowDecor || !(parent instanceof View)
-                    || ViewCompat.isAttachedToWindow((View) parent)) {
+                    || ((View) parent).isAttachedToWindow()) {
                 // We have either hit the window's decor view, a parent which isn't a View
                 // (i.e. ViewRootImpl), or an attached view, so we know that the original parent
                 // is currently added to the view hierarchy. This means that it has not be

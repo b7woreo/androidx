@@ -29,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.integration.demos.common.ScalingLazyColumnWithRSB
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.SplitRadioButton
 import androidx.wear.compose.material3.Text
@@ -37,7 +37,7 @@ import androidx.wear.compose.material3.Text
 @Composable
 fun SplitRadioButtonDemo() {
     var selectedRadioIndex by remember { mutableIntStateOf(0) }
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -73,7 +73,7 @@ fun SplitRadioButtonDemo() {
                 enabled = true,
                 selected = true,
                 primary = "8:15AM",
-                secondary = "Mon, Tue, Wed"
+                secondary = "Monday"
             )
         }
         item {
@@ -104,6 +104,7 @@ private fun DemoSplitRadioButton(
 ) {
     val context = LocalContext.current
     SplitRadioButton(
+        modifier = Modifier.fillMaxWidth(),
         label = {
             Text(
                 primary,
@@ -127,7 +128,8 @@ private fun DemoSplitRadioButton(
         selected = selected,
         onSelected = onSelected,
         onClick = {
-            Toast.makeText(context, "Clicked", Toast.LENGTH_SHORT).show()
+            val toastText = if (selected) "Checked" else "Not Checked"
+            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
         },
         enabled = enabled,
     )

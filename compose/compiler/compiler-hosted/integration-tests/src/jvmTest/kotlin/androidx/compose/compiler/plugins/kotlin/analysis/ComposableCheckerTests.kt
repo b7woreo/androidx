@@ -1259,10 +1259,19 @@ class ComposableCheckerTests(useFir: Boolean) : AbstractComposeDiagnosticsTest(u
                 val x = object {
                   val b = remember { mutableStateOf(3) }
                 }
+                val y = run {
+                    object {
+                      val b = remember { mutableStateOf(3) }
+                      val a = object {
+                        val b = remember { mutableStateOf(3) }
+                      }
+                    }
+                }
                 class Bar {
                   val a = <!COMPOSABLE_INVOCATION!>remember<!> { mutableStateOf(5) }
                 }
                 print(x)
+                print(y)
             }
         """
         )
@@ -1611,6 +1620,25 @@ class ComposableCheckerTests(useFir: Boolean) : AbstractComposeDiagnosticsTest(u
                       }
                       return MyClass()
                   }
+            """
+        )
+    }
+
+    @Test
+    fun testComposableCallInsideNonComposableNonInlinedLambda() {
+        check(
+            """
+                import androidx.compose.runtime.Composable
+
+                @Composable fun ComposableFunction() {}
+
+                fun functionThatTakesALambda(content: () -> Unit) { content() }
+
+                fun NonComposableFunction() {
+                    functionThatTakesALambda {
+                        <!COMPOSABLE_INVOCATION!>ComposableFunction<!>()  // invocation
+                    }
+                }
             """
         )
     }

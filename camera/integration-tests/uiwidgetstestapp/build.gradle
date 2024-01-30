@@ -98,6 +98,9 @@ dependencies {
     implementation 'androidx.compose.material:material-icons-extended:1.4.0'
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4:1.1.1'
 
+    // Align dependencies in debugRuntimeClasspath and debugAndroidTestRuntimeClasspath.
+    androidTestImplementation("androidx.annotation:annotation-experimental:1.4.0")
+
     // Testing framework
     androidTestImplementation(libs.testExtJunit)
     androidTestImplementation(libs.testCore)
@@ -131,7 +134,7 @@ dependencies {
     androidTestImplementation(project(":compose:ui:ui-graphics"))
     androidTestImplementation(project(":compose:ui:ui-unit"))
     androidTestImplementation(project(":compose:ui:ui-text"))
-    androidTestImplementation(project(":collection:collection"))
+    androidTestImplementation("androidx.collection:collection:1.4.0")
     // Needed for createComposeRule, but not createAndroidComposeRule:
     debugImplementation(project(":compose:ui:ui-test-manifest"))
 }

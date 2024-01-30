@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.pager
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.ui.unit.IntSize
@@ -27,7 +26,6 @@ import androidx.compose.ui.unit.IntSize
  *
  * Use [PagerState.layoutInfo] to retrieve this
  */
-@ExperimentalFoundationApi
 sealed interface PagerLayoutInfo {
     /**
      * A list of all pages that are currently visible in the [Pager]
@@ -98,7 +96,7 @@ sealed interface PagerLayoutInfo {
      * the pages automatically composed and laid out by the pre-fetcher in the direction of the
      * scroll during scroll events.
      */
-    val beyondBoundsPageCount: Int
+    val outOfBoundsPageCount: Int
 
     /**
      * The calculation of how this Pager performs snapping of pages.
@@ -106,6 +104,5 @@ sealed interface PagerLayoutInfo {
     val snapPosition: SnapPosition
 }
 
-@ExperimentalFoundationApi
 internal val PagerLayoutInfo.mainAxisViewportSize: Int
     get() = if (orientation == Orientation.Vertical) viewportSize.height else viewportSize.width

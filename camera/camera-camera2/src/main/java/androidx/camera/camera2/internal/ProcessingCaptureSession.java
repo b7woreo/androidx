@@ -103,8 +103,6 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
     private static List<DeferrableSurface> sHeldProcessorSurfaces = new ArrayList<>();
     @Nullable
     private volatile List<CaptureConfig> mPendingCaptureConfigs = null;
-    @SuppressWarnings("WeakerAccess") /* synthetic accessor */
-    volatile boolean mIsExecutingStillCaptureRequest = false;
     private final SessionProcessorCaptureCallback mSessionProcessorCaptureCallback;
 
     private CaptureRequestOptions mSessionOptions = new CaptureRequestOptions.Builder().build();
@@ -294,7 +292,7 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
         for (CaptureConfig captureConfig : captureConfigs) {
             for (CameraCaptureCallback cameraCaptureCallback :
                     captureConfig.getCameraCaptureCallbacks()) {
-                cameraCaptureCallback.onCaptureCancelled();
+                cameraCaptureCallback.onCaptureCancelled(captureConfig.getId());
             }
         }
     }
@@ -324,29 +322,9 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
             cancelRequests(Arrays.asList(captureConfig));
             return;
         }
-        mSessionProcessor.startTrigger(options, new SessionProcessor.CaptureCallback() {
-            @Override
-            public void onCaptureFailed(int captureSequenceId) {
-                mExecutor.execute(() -> {
-                    for (CameraCaptureCallback cameraCaptureCallback :
-                            captureConfig.getCameraCaptureCallbacks()) {
-                        cameraCaptureCallback.onCaptureFailed(new CameraCaptureFailure(
-                                CameraCaptureFailure.Reason.ERROR));
-                    }
-                });
-            }
-
-            @Override
-            public void onCaptureSequenceCompleted(int captureSequenceId) {
-                mExecutor.execute(() -> {
-                    for (CameraCaptureCallback cameraCaptureCallback :
-                            captureConfig.getCameraCaptureCallbacks()) {
-                        cameraCaptureCallback.onCaptureCompleted(
-                                new CameraCaptureResult.EmptyCameraCaptureResult());
-                    }
-                });
-            }
-        });
+        mSessionProcessor.startTrigger(options,
+                new CaptureCallbackAdapter(captureConfig.getId(),
+                        captureConfig.getCameraCaptureCallbacks()));
     }
 
     /**
@@ -424,42 +402,50 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
         mStillCaptureOptions = builder.build();
         updateParameters(mSessionOptions, mStillCaptureOptions);
         mSessionProcessor.startCapture(captureConfig.isPostviewEnabled(),
-                new SessionProcessor.CaptureCallback() {
-                    @Override
-                    public void onCaptureStarted(int captureSequenceId, long timestamp) {
-                        for (CameraCaptureCallback cameraCaptureCallback :
-                                captureConfig.getCameraCaptureCallbacks()) {
-                            cameraCaptureCallback.onCaptureStarted();
-                        }
-                    }
+                  new CaptureCallbackAdapter(captureConfig.getId(),
+                          captureConfig.getCameraCaptureCallbacks()));
+    }
 
-                    @Override
-                    public void onCaptureFailed(
-                            int captureSequenceId) {
-                        for (CameraCaptureCallback cameraCaptureCallback :
-                                captureConfig.getCameraCaptureCallbacks()) {
-                            cameraCaptureCallback.onCaptureFailed(new CameraCaptureFailure(
-                                    CameraCaptureFailure.Reason.ERROR));
-                        }
-                    }
+    private static class CaptureCallbackAdapter implements SessionProcessor.CaptureCallback {
+        private List<CameraCaptureCallback> mCameraCaptureCallbacks;
+        private final int mCaptureConfigId;
 
-                    @Override
-                    public void onCaptureSequenceCompleted(int captureSequenceId) {
-                        for (CameraCaptureCallback cameraCaptureCallback :
-                                captureConfig.getCameraCaptureCallbacks()) {
-                            cameraCaptureCallback.onCaptureCompleted(
-                                    new CameraCaptureResult.EmptyCameraCaptureResult());
-                        }
-                    }
+        private CaptureCallbackAdapter(int captureConfigId,
+                List<CameraCaptureCallback> cameraCaptureCallbacks) {
+            mCaptureConfigId = captureConfigId;
+            mCameraCaptureCallbacks = cameraCaptureCallbacks;
+        }
 
-                    @Override
-                    public void onCaptureProcessProgressed(int progress) {
-                        for (CameraCaptureCallback cameraCaptureCallback :
-                                captureConfig.getCameraCaptureCallbacks()) {
-                            cameraCaptureCallback.onCaptureProcessProgressed(progress);
-                        }
-                    }
-                });
+        @Override
+        public void onCaptureStarted(int captureSequenceId, long timestamp) {
+            for (CameraCaptureCallback cameraCaptureCallback : mCameraCaptureCallbacks) {
+                cameraCaptureCallback.onCaptureStarted(mCaptureConfigId);
+            }
+        }
+
+        @Override
+        public void onCaptureFailed(
+                int captureSequenceId) {
+            for (CameraCaptureCallback cameraCaptureCallback : mCameraCaptureCallbacks) {
+                cameraCaptureCallback.onCaptureFailed(mCaptureConfigId, new CameraCaptureFailure(
+                        CameraCaptureFailure.Reason.ERROR));
+            }
+        }
+
+        @Override
+        public void onCaptureSequenceCompleted(int captureSequenceId) {
+            for (CameraCaptureCallback cameraCaptureCallback : mCameraCaptureCallbacks) {
+                cameraCaptureCallback.onCaptureCompleted(mCaptureConfigId,
+                        new CameraCaptureResult.EmptyCameraCaptureResult());
+            }
+        }
+
+        @Override
+        public void onCaptureProcessProgressed(int progress) {
+            for (CameraCaptureCallback cameraCaptureCallback : mCameraCaptureCallbacks) {
+                cameraCaptureCallback.onCaptureProcessProgressed(mCaptureConfigId, progress);
+            }
+        }
     }
 
     /**
@@ -548,7 +534,7 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
             for (CaptureConfig captureConfig : mPendingCaptureConfigs) {
                 for (CameraCaptureCallback cameraCaptureCallback :
                         captureConfig.getCameraCaptureCallbacks()) {
-                    cameraCaptureCallback.onCaptureCancelled();
+                    cameraCaptureCallback.onCaptureCancelled(captureConfig.getId());
                 }
             }
             mPendingCaptureConfigs = null;

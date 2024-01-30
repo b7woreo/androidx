@@ -54,7 +54,7 @@ internal fun LazyLayoutMeasureScope.measurePager(
     reverseLayout: Boolean,
     visualPageOffset: IntOffset,
     pageAvailableSize: Int,
-    beyondBoundsPageCount: Int,
+    outOfBoundsPageCount: Int,
     pinnedPages: List<Int>,
     snapPosition: SnapPosition,
     placementScopeInvalidator: ObservableScopeInvalidator,
@@ -68,7 +68,7 @@ internal fun LazyLayoutMeasureScope.measurePager(
         "Starting Measure Pass..." +
             "\n CurrentPage = $currentPage" +
             "\n CurrentPageOffset = $currentPageOffset" +
-            "\n SnapPosition = ${snapPosition.string()}"
+            "\n SnapPosition = $snapPosition"
     }
 
     return if (pageCount <= 0) {
@@ -84,7 +84,7 @@ internal fun LazyLayoutMeasureScope.measurePager(
             firstVisiblePage = null,
             firstVisiblePageScrollOffset = 0,
             reverseLayout = false,
-            beyondBoundsPageCount = beyondBoundsPageCount,
+            outOfBoundsPageCount = outOfBoundsPageCount,
             canScrollForward = false,
             currentPage = null,
             currentPageOffsetFraction = 0.0f,
@@ -311,7 +311,7 @@ internal fun LazyLayoutMeasureScope.measurePager(
         // Compose extra pages before
         val extraPagesBefore = createPagesBeforeList(
             currentFirstPage = currentFirstPage,
-            beyondBoundsPageCount = beyondBoundsPageCount,
+            outOfBoundsPageCount = outOfBoundsPageCount,
             pinnedPages = pinnedPages
         ) {
             getAndMeasure(
@@ -337,7 +337,7 @@ internal fun LazyLayoutMeasureScope.measurePager(
         val extraPagesAfter = createPagesAfterList(
             currentLastPage = visiblePages.last().index,
             pagesCount = pageCount,
-            beyondBoundsPageCount = beyondBoundsPageCount,
+            outOfBoundsPageCount = outOfBoundsPageCount,
             pinnedPages = pinnedPages
         ) {
             getAndMeasure(
@@ -399,6 +399,15 @@ internal fun LazyLayoutMeasureScope.measurePager(
             (it.index >= visiblePages.first().index && it.index <= visiblePages.last().index)
         }
 
+        val positionedPagesBefore =
+            if (extraPagesBefore.isEmpty()) emptyList() else positionedPages.fastFilter {
+                it.index < visiblePages.first().index
+            }
+
+        val positionedPagesAfter =
+            if (extraPagesAfter.isEmpty()) emptyList() else positionedPages.fastFilter {
+                it.index > visiblePages.last().index
+            }
         val newCurrentPage =
             calculateNewCurrentPage(
                 if (orientation == Orientation.Vertical) layoutHeight else layoutWidth,
@@ -406,7 +415,8 @@ internal fun LazyLayoutMeasureScope.measurePager(
                 beforeContentPadding,
                 afterContentPadding,
                 pageSizeWithSpacing,
-                snapPosition
+                snapPosition,
+                pageCount
             )
 
         val snapOffset = snapPosition.position(
@@ -414,7 +424,8 @@ internal fun LazyLayoutMeasureScope.measurePager(
             pageAvailableSize,
             beforeContentPadding,
             afterContentPadding,
-            newCurrentPage?.index ?: 0
+            newCurrentPage?.index ?: 0,
+            pageCount
         )
 
         val currentPagePositionOffset = (newCurrentPage?.offset ?: 0)
@@ -453,12 +464,14 @@ internal fun LazyLayoutMeasureScope.measurePager(
             pageSize = pageAvailableSize,
             pageSpacing = spaceBetweenPages,
             afterContentPadding = afterContentPadding,
-            beyondBoundsPageCount = beyondBoundsPageCount,
+            outOfBoundsPageCount = outOfBoundsPageCount,
             canScrollForward = index < pageCount || currentMainAxisOffset > maxOffset,
             currentPage = newCurrentPage,
             currentPageOffsetFraction = currentPageOffsetFraction,
             snapPosition = snapPosition,
-            remeasureNeeded = remeasureNeeded
+            remeasureNeeded = remeasureNeeded,
+            extraPagesBefore = positionedPagesBefore,
+            extraPagesAfter = positionedPagesAfter
         )
     }
 }
@@ -466,13 +479,13 @@ internal fun LazyLayoutMeasureScope.measurePager(
 private fun createPagesAfterList(
     currentLastPage: Int,
     pagesCount: Int,
-    beyondBoundsPageCount: Int,
+    outOfBoundsPageCount: Int,
     pinnedPages: List<Int>,
     getAndMeasure: (Int) -> MeasuredPage
 ): List<MeasuredPage> {
     var list: MutableList<MeasuredPage>? = null
 
-    val end = minOf(currentLastPage + beyondBoundsPageCount, pagesCount - 1)
+    val end = minOf(currentLastPage + outOfBoundsPageCount, pagesCount - 1)
 
     for (i in currentLastPage + 1..end) {
         if (list == null) list = mutableListOf()
@@ -491,13 +504,13 @@ private fun createPagesAfterList(
 
 private fun createPagesBeforeList(
     currentFirstPage: Int,
-    beyondBoundsPageCount: Int,
+    outOfBoundsPageCount: Int,
     pinnedPages: List<Int>,
     getAndMeasure: (Int) -> MeasuredPage
 ): List<MeasuredPage> {
     var list: MutableList<MeasuredPage>? = null
 
-    val start = maxOf(0, currentFirstPage - beyondBoundsPageCount)
+    val start = maxOf(0, currentFirstPage - outOfBoundsPageCount)
 
     for (i in currentFirstPage - 1 downTo start) {
         if (list == null) list = mutableListOf()
@@ -514,14 +527,14 @@ private fun createPagesBeforeList(
     return list ?: emptyList()
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 private fun calculateNewCurrentPage(
     viewportSize: Int,
     visiblePagesInfo: List<MeasuredPage>,
     beforeContentPadding: Int,
     afterContentPadding: Int,
     itemSize: Int,
-    snapPosition: SnapPosition
+    snapPosition: SnapPosition,
+    pageCount: Int
 ): MeasuredPage? {
     return visiblePagesInfo.fastMaxBy {
         -abs(
@@ -532,7 +545,8 @@ private fun calculateNewCurrentPage(
                 itemSize = itemSize,
                 itemOffset = it.offset,
                 itemIndex = it.index,
-                snapPosition = snapPosition
+                snapPosition = snapPosition,
+                itemCount = pageCount
             )
         )
     }
@@ -650,16 +664,6 @@ private fun LazyLayoutMeasureScope.calculatePagesOffsets(
         }
     }
     return positionedPages
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-private fun SnapPosition.string(): String {
-    return when (this) {
-        SnapPosition.Start -> "Start"
-        SnapPosition.End -> "End"
-        SnapPosition.Center -> "Center"
-        else -> "Custom"
-    }
 }
 
 internal const val MinPageOffset = -0.5f

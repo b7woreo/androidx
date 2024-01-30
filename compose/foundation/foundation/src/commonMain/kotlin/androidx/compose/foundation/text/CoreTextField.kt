@@ -90,7 +90,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.SoftwareKeyboardController
-import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.semantics.copyText
 import androidx.compose.ui.semantics.cutText
 import androidx.compose.ui.semantics.disabled
@@ -126,6 +125,7 @@ import androidx.compose.ui.text.input.TextInputSession
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastRoundToInt
 import kotlin.math.max
@@ -242,6 +242,7 @@ internal fun CoreTextField(
     // State
     val transformedText = remember(value, visualTransformation) {
         val transformed = visualTransformation.filterWithValidation(value.annotatedString)
+
         value.composition?.let {
             TextFieldDelegate.applyCompositionDecoration(it, transformed)
         } ?: transformed
@@ -420,7 +421,7 @@ internal fun CoreTextField(
         state.layoutResult?.innerTextFieldCoordinates = it
         if (enabled) {
             if (state.handleState == HandleState.Selection) {
-                if (state.showFloatingToolbar && isWindowFocusedBehindFlag(windowInfo)) {
+                if (state.showFloatingToolbar && windowInfo.isWindowFocused) {
                     manager.showSelectionToolbar()
                 } else {
                     manager.hideSelectionToolbar()
@@ -528,8 +529,8 @@ internal fun CoreTextField(
                 false
             } else if (start == value.selection.start && end == value.selection.end) {
                 false
-            } else if (start.coerceAtMost(end) >= 0 &&
-                start.coerceAtLeast(end) <= value.annotatedString.length
+            } else if (minOf(start, end) >= 0 &&
+                maxOf(start, end) <= value.annotatedString.length
             ) {
                 // Do not show toolbar if it's a traversal mode (with the volume keys), or
                 // if the cursor just moved to beginning or end.
@@ -587,7 +588,7 @@ internal fun CoreTextField(
         }
     }
 
-    val showCursor = enabled && !readOnly && isWindowFocusedBehindFlag(windowInfo)
+    val showCursor = enabled && !readOnly && windowInfo.isWindowFocused
     val cursorModifier = Modifier.cursor(state, value, offsetMapping, cursorBrush, showCursor)
 
     DisposableEffect(manager) {
@@ -637,7 +638,7 @@ internal fun CoreTextField(
         }
 
     val showHandleAndMagnifier =
-        enabled && state.hasFocus && state.isInTouchMode && isWindowFocusedBehindFlag(windowInfo)
+        enabled && state.hasFocus && state.isInTouchMode && windowInfo.isWindowFocused
     val magnifierModifier = if (showHandleAndMagnifier) {
         Modifier.textFieldMagnifier(manager)
     } else {
@@ -1036,7 +1037,7 @@ private fun endInputSession(state: LegacyTextFieldState) {
 
 /**
  * Calculates the location of the end of the current selection and requests that it be brought into
- * view using [bringIntoView][BringIntoViewRequester.bringIntoView].
+ * view using [bringCursorIntoView][BringIntoViewRequester.bringIntoView].
  *
  * Text fields have a lot of different edge cases where they need to make sure they stay visible:
  *
@@ -1154,8 +1155,7 @@ internal fun TextFieldCursorHandle(manager: TextFieldSelectionManager) {
                         anchor = SelectionHandleAnchor.Middle,
                         visible = true,
                     )
-                },
-            content = null
+                }
         )
     }
 }
@@ -1164,7 +1164,7 @@ internal fun TextFieldCursorHandle(manager: TextFieldSelectionManager) {
 internal expect fun CursorHandle(
     handlePosition: Offset,
     modifier: Modifier,
-    content: @Composable (() -> Unit)?
+    minTouchTargetSize: DpSize = DpSize.Unspecified
 )
 
 // TODO(b/262648050) Try to find a better API.
@@ -1192,8 +1192,3 @@ private fun notifyFocusedRect(
         )
     }
 }
-
-// (b/308895081) Temporary disable use of Window Focus for cursor blinking state
-internal const val USE_WINDOW_FOCUS_ENABLED = false
-internal fun isWindowFocusedBehindFlag(windowInfo: WindowInfo) =
-    if (USE_WINDOW_FOCUS_ENABLED) windowInfo.isWindowFocused else true

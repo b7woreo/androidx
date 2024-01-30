@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material3.tokens.MotionTokens
 import androidx.wear.compose.materialcore.InlineSliderButton
 import androidx.wear.compose.materialcore.RangeDefaults.calculateCurrentStepValue
 import androidx.wear.compose.materialcore.RangeDefaults.snapValueToStep
@@ -167,7 +168,11 @@ fun InlineSlider(
 
                 val valueRatio by animateFloatAsState(
                     targetValue = currentStep.toFloat() / (steps + 1).toFloat(),
-                    animationSpec = tween(SHORT_3, 0, STANDARD_DECELERATE)
+                    animationSpec = tween(
+                        durationMillis = MotionTokens.DurationShort3,
+                        delayMillis = 0,
+                        easing = MotionTokens.EasingStandardDecelerate
+                    )
                 )
 
                 Box(
@@ -508,8 +513,5 @@ private fun InlineSliderButtonContent(
     content: @Composable () -> Unit
 ) = CompositionLocalProvider(
     LocalContentColor provides buttonIconColor(enabled).value,
-    LocalContentAlpha provides if (enabled) {
-        LocalContentAlpha.current
-    } else ContentAlpha.disabled,
     content = content
 )

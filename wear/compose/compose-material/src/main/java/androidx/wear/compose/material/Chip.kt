@@ -113,7 +113,7 @@ public fun Chip(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     contentPadding: PaddingValues = ChipDefaults.ContentPadding,
-    shape: Shape = MaterialTheme.shapes.small,
+    shape: Shape = MaterialTheme.shapes.large,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     role: Role? = Role.Button,
     content: @Composable RowScope.() -> Unit,
@@ -166,10 +166,10 @@ public fun Chip(
  * content
  * @param shape Defines the chip's shape. It is strongly recommended to use the default as this
  * shape is a key characteristic of the Wear Material Theme
- * @param interactionSource The [MutableInteractionSource] representing the stream of
- * [Interaction]s for this Chip. You can create and pass in your own remembered
- * [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this Chip in different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this chip. You can use this to change the chip's appearance
+ * or preview the chip in different states. Note that if `null` is provided, interactions will
+ * still happen internally.
  * @param role The type of user interface element. Accessibility services might use this
  * to describe the element or do customizations
  */
@@ -181,8 +181,8 @@ public fun Chip(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     contentPadding: PaddingValues = ChipDefaults.ContentPadding,
-    shape: Shape = MaterialTheme.shapes.small,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    shape: Shape = MaterialTheme.shapes.large,
+    interactionSource: MutableInteractionSource? = null,
     role: Role? = Role.Button,
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -335,10 +335,10 @@ public fun Chip(
  * [ChipDefaults.primaryChipColors]
  * @param enabled Controls the enabled state of the chip. When `false`, this chip will not
  * be clickable
- * @param interactionSource The [MutableInteractionSource] representing the stream of
- * [Interaction]s for this Chip. You can create and pass in your own remembered
- * [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this Chip in different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this chip. You can use this to change the chip's appearance
+ * or preview the chip in different states. Note that if `null` is provided, interactions will
+ * still happen internally.
  * @param contentPadding The spacing values to apply internally between the container and the
  * content
  * @param shape Defines the chip's shape. It is strongly recommended to use the default as this
@@ -355,9 +355,9 @@ public fun Chip(
     icon: (@Composable BoxScope.() -> Unit)? = null,
     colors: ChipColors = ChipDefaults.primaryChipColors(),
     enabled: Boolean = true,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     contentPadding: PaddingValues = ChipDefaults.ContentPadding,
-    shape: Shape = MaterialTheme.shapes.small,
+    shape: Shape = MaterialTheme.shapes.large,
     border: ChipBorder = ChipDefaults.chipBorder()
 ) {
     ChipImpl(
@@ -419,10 +419,10 @@ public fun Chip(
  * this chip in different states.
  * @param enabled Controls the enabled state of the chip. When `false`, this chip will not
  * be clickable
- * @param interactionSource The [MutableInteractionSource] representing the stream of
- * [Interaction]s for this Chip. You can create and pass in your own remembered
- * [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this Chip in different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this chip. You can use this to change the chip's appearance
+ * or preview the chip in different states. Note that if `null` is provided, interactions will
+ * still happen internally.
  * @param contentPadding The spacing values to apply internally between the container and the
  * content
  * @param shape Defines the chip's shape. It is strongly recommended to use the default as this
@@ -438,9 +438,9 @@ public fun OutlinedChip(
     icon: (@Composable BoxScope.() -> Unit)? = null,
     colors: ChipColors = ChipDefaults.outlinedChipColors(),
     enabled: Boolean = true,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     contentPadding: PaddingValues = ChipDefaults.ContentPadding,
-    shape: Shape = MaterialTheme.shapes.small,
+    shape: Shape = MaterialTheme.shapes.large,
     border: ChipBorder = ChipDefaults.outlinedChipBorder()
 ) =
     Chip(
@@ -614,10 +614,10 @@ public fun CompactChip(
  * [ChipDefaults.primaryChipColors]
  * @param enabled Controls the enabled state of the chip. When `false`, this chip will not
  * be clickable
- * @param interactionSource The [MutableInteractionSource] representing the stream of
- * [Interaction]s for this Chip. You can create and pass in your own remembered
- * [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this Chip in different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this chip. You can use this to change the chip's appearance
+ * or preview the chip in different states. Note that if `null` is provided, interactions will
+ * still happen internally.
  * @param contentPadding The spacing values to apply internally between the container and the
  * content
  * @param shape Defines the chip's shape. It is strongly recommended to use the default as this
@@ -633,9 +633,9 @@ public fun CompactChip(
     icon: (@Composable BoxScope.() -> Unit)? = null,
     colors: ChipColors = ChipDefaults.primaryChipColors(),
     enabled: Boolean = true,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     contentPadding: PaddingValues = ChipDefaults.CompactChipContentPadding,
-    shape: Shape = MaterialTheme.shapes.small,
+    shape: Shape = MaterialTheme.shapes.large,
     border: ChipBorder = ChipDefaults.chipBorder()
 ) {
     if (label != null) {
@@ -738,10 +738,10 @@ public fun CompactChip(
  * [ChipDefaults.primaryChipColors]
  * @param enabled Controls the enabled state of the chip. When `false`, this chip will not
  * be clickable
- * @param interactionSource The [MutableInteractionSource] representing the stream of
- * [Interaction]s for this Chip. You can create and pass in your own remembered
- * [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this Chip in different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this chip. You can use this to change the chip's appearance
+ * or preview the chip in different states. Note that if `null` is provided, interactions will
+ * still happen internally.
  * @param contentPadding The spacing values to apply internally between the container and the
  * content
  * @param shape Defines the chip's shape. It is strongly recommended to use the default as this
@@ -757,9 +757,9 @@ public fun OutlinedCompactChip(
     icon: (@Composable BoxScope.() -> Unit)? = null,
     colors: ChipColors = ChipDefaults.outlinedChipColors(),
     enabled: Boolean = true,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     contentPadding: PaddingValues = ChipDefaults.CompactChipContentPadding,
-    shape: Shape = MaterialTheme.shapes.small,
+    shape: Shape = MaterialTheme.shapes.large,
     border: ChipBorder = ChipDefaults.outlinedChipBorder()
 ) =
     CompactChip(
@@ -1404,7 +1404,7 @@ private fun ChipImpl(
     enabled: Boolean,
     contentPadding: PaddingValues,
     shape: Shape,
-    interactionSource: MutableInteractionSource,
+    interactionSource: MutableInteractionSource?,
     role: Role? = Role.Button,
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -1447,7 +1447,7 @@ private fun ChipImpl(
     icon: (@Composable BoxScope.() -> Unit)?,
     colors: ChipColors,
     enabled: Boolean,
-    interactionSource: MutableInteractionSource,
+    interactionSource: MutableInteractionSource?,
     contentPadding: PaddingValues,
     shape: Shape,
     border: ChipBorder?,

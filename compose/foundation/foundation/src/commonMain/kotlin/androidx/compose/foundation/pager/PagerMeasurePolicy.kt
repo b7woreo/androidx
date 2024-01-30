@@ -45,7 +45,7 @@ internal fun rememberPagerMeasurePolicy(
     contentPadding: PaddingValues,
     reverseLayout: Boolean,
     orientation: Orientation,
-    beyondBoundsPageCount: Int,
+    outOfBoundsPageCount: Int,
     pageSpacing: Dp,
     pageSize: PageSize,
     horizontalAlignment: Alignment.Horizontal?,
@@ -153,7 +153,8 @@ internal fun rememberPagerMeasurePolicy(
                 beforeContentPadding,
                 afterContentPadding,
                 state.currentPage,
-                state.currentPageOffsetFraction
+                state.currentPageOffsetFraction,
+                state.pageCount
             )
         }
 
@@ -171,7 +172,7 @@ internal fun rememberPagerMeasurePolicy(
             mainAxisAvailableSize = mainAxisAvailableSize,
             visualPageOffset = visualItemOffset,
             pageAvailableSize = pageAvailableSize,
-            beyondBoundsPageCount = beyondBoundsPageCount,
+            outOfBoundsPageCount = outOfBoundsPageCount,
             orientation = orientation,
             currentPage = currentPage,
             currentPageOffset = currentPageOffset,
@@ -193,11 +194,5 @@ internal fun rememberPagerMeasurePolicy(
         ).also {
             state.applyMeasureResult(it)
         }
-    }
-}
-
-private inline fun debugLog(generateMsg: () -> String) {
-    if (PagerDebugConfig.MeasurePolicy) {
-        println("PagerMeasurePolicy: ${generateMsg()}")
     }
 }

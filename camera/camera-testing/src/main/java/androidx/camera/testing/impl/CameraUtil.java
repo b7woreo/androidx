@@ -627,9 +627,9 @@ public final class CameraUtil {
         try {
             CameraX cameraX = CameraXUtil.getOrCreateInstance(context, null).get(5000,
                     TimeUnit.MILLISECONDS);
-            LinkedHashSet<CameraInternal> cameras =
-                    cameraSelector.filter(cameraX.getCameraRepository().getCameras());
-            return new CameraUseCaseAdapter(cameras,
+            CameraInternal camera =
+                    cameraSelector.select(cameraX.getCameraRepository().getCameras());
+            return new CameraUseCaseAdapter(camera,
                     cameraCoordinator,
                     cameraX.getCameraDeviceSurfaceManager(),
                     cameraX.getDefaultConfigFactory(),
@@ -845,6 +845,22 @@ public final class CameraUtil {
             }
         }
         return null;
+    }
+
+    /**
+     * Gets the {@link CameraCharacteristics} by specified camera id.
+     *
+     * @return the camera characteristics for the given camera id or {@code null} if it can't
+     * be retrieved.
+     */
+    @Nullable
+    public static CameraCharacteristics getCameraCharacteristics(@NonNull String cameraId) {
+        try {
+            return getCameraCharacteristicsOrThrow(cameraId);
+        } catch (RuntimeException e) {
+            Logger.e(LOG_TAG, "Unable to get CameraCharacteristics.", e);
+            return null;
+        }
     }
 
     /**

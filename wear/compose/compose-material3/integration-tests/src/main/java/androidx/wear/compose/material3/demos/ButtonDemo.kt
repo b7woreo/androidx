@@ -26,7 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.integration.demos.common.ScalingLazyColumnWithRSB
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonColors
 import androidx.wear.compose.material3.ButtonDefaults
@@ -51,7 +51,7 @@ import androidx.wear.compose.material3.samples.SimpleOutlinedButtonSample
 
 @Composable
 fun ButtonDemo() {
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -98,7 +98,7 @@ fun ButtonDemo() {
 
 @Composable
 fun FilledTonalButtonDemo() {
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -145,7 +145,7 @@ fun FilledTonalButtonDemo() {
 
 @Composable
 fun OutlinedButtonDemo() {
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -192,7 +192,7 @@ fun OutlinedButtonDemo() {
 
 @Composable
 fun ChildButtonDemo() {
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -239,7 +239,7 @@ fun ChildButtonDemo() {
 
 @Composable
 fun CompactButtonDemo() {
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -263,7 +263,7 @@ fun CompactButtonDemo() {
                 icon = { StandardIcon(ButtonDefaults.SmallIconSize) },
                 colors = ButtonDefaults.childButtonColors()
             ) {
-                Text("Child Compact Button", maxLines = 1)
+                Text("Child Compact Button", maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         item {
@@ -308,7 +308,7 @@ fun CompactButtonDemo() {
             CompactButton(
                 onClick = { /* Do something */ },
             ) {
-                Text("Filled compact button", maxLines = 1)
+                Text("Filled compact button", maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         item {
@@ -316,7 +316,7 @@ fun CompactButtonDemo() {
                 onClick = { /* Do something */ },
                 colors = ButtonDefaults.filledTonalButtonColors()
             ) {
-                Text("Filled tonal compact button", maxLines = 1)
+                Text("Filled tonal compact button", maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         item {
@@ -325,7 +325,7 @@ fun CompactButtonDemo() {
                 colors = ButtonDefaults.outlinedButtonColors(),
                 border = ButtonDefaults.outlinedButtonBorder(enabled = true)
             ) {
-                Text("Outlined compact button", maxLines = 1)
+                Text("Outlined compact button", maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         item {
@@ -333,7 +333,7 @@ fun CompactButtonDemo() {
                 onClick = { /* Do something */ },
                 colors = ButtonDefaults.childButtonColors()
             ) {
-                Text("Child compact button", maxLines = 1)
+                Text("Child compact button", maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -341,7 +341,7 @@ fun CompactButtonDemo() {
 
 @Composable
 fun MultilineButtonDemo() {
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -384,7 +384,7 @@ fun MultilineButtonDemo() {
 
 @Composable
 fun AvatarButtonDemo() {
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
